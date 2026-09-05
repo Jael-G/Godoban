@@ -1,0 +1,15 @@
+# Godot 4+ editor cache & import artifacts — regenerated every run, not source.
+.godot/
+.import/
+export/
+
+
+
+# OS / editor noise.
+.DS_Store
+Thumbs.db
+*.tmp
+*.user
+.idea/
+.vscode/
+*.code-workspace

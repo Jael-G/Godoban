@@ -1,0 +1,9 @@
+# Archive rules: what ships in the Asset Library download ZIP.
+# Only the installed plugin folder is bundled. Repo-root files (README, LICENSE,
+# icon, .gitignore/.gitattributes) are GitHub-facing, and the screenshots are
+# listing previews referenced by URL — so none of them are included.
+/**                                            export-ignore
+/addons                                        !export-ignore
+/addons/**                                     !export-ignore
+/addons/godoban/screenshots/                export-ignore
+/addons/godoban/screenshots/**              export-ignore

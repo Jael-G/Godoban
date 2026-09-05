@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://q1c5vumkqjxh"]
+
+[ext_resource type="Script" uid="uid://o3le3md10q6g" path="res://addons/godoban/godoban_main_screen.gd" id="1"]
+
+[node name="GodobanMainScreen" type="Control" unique_id=1125120192]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1")
