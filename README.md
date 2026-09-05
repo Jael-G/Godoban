@@ -242,7 +242,7 @@ The bundled `Geist` font is licensed under the **SIL Open Font License**; see `a
 
 ---
 
-<p align="center">Made by <a href="https://github.com/jaelgonzalez">Jael Gonzalez</a></p>
+<p align="center">Made by <a href="https://github.com/JAEL-G">Jael Gonzalez</a></p>
 
 <p align="center">
   <a href="#-screenshots">📸 Screenshots</a>
