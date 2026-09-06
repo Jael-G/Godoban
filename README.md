@@ -59,6 +59,14 @@
       <br><sub>Stats, a by-status donut, priority bars, and actionable lists</sub>
     </td>
   </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <!-- TODO (author): replace this placeholder with a screenshot of the board in your editor theme -->
+      <img src="addons/godoban/screenshots/theme.png" alt="Editor-Native Theme" width="480">
+      <br><strong>Editor-Native Theme</strong>
+      <br><sub>The board adopts your editor theme's colors — dark or light — so it reads as native to the editor</sub>
+    </td>
+  </tr>
 </table>
 </div>
 
@@ -159,6 +167,20 @@ The same data, presented the way you want it.
 
 </details>
 
+### 🎨 Editor-Native Theme
+
+The board matches your editor theme, so it looks like it belongs right in the editor.
+
+<details>
+<summary><strong>See theme details</strong></summary>
+
+| Feature | Description |
+|---|---|
+| **Matches the Editor** | Colors follow your current editor theme — dark or light. |
+| **Auto-Updates** | The palette re-syncs on every theme change. |
+
+</details>
+
 ---
 
 ## 🛠️ Installation
@@ -191,7 +213,7 @@ Godoban is a self-contained editor plugin. You can drop it straight into any God
 | **Language** | GDScript (`@tool`, runs in the editor) |
 | **Persistence** | Pretty-printed JSON via `FileAccess` + `JSON` |
 | **UI** | Native `Control` nodes, no scene files — the whole board is built in code |
-| **Design System** | Central theme (`theme.gd`) + rasterized SVG glyphs (`icons.gd`) |
+| **Design System** | Editor-native theme (`theme.gd`, resolves colors from Godot's editor theme) + rasterized SVG glyphs (`icons.gd`) |
 
 ---
 
