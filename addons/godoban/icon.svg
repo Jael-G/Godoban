@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"  fill="#ffffff" class="kanban logo">
+  <rect x="0" y="0" width="16" height="1.35" rx="0.675"/>
+  <rect x="0.3" y="2" width="2.8" height="9.75" rx="0.9"/>
+  <rect x="4.5" y="2" width="2.8" height="6.25" rx="0.9"/>
+  <rect x="8.7" y="2" width="2.8" height="13.75" rx="0.9"/>
+  <rect x="12.9" y="2" width="2.8" height="7.5" rx="0.9"/>
+</svg>

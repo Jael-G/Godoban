@@ -32,7 +32,7 @@ func _get_plugin_name() -> String:
 	return "Godoban"
 
 func _get_plugin_icon() -> Texture2D:
-	return EditorInterface.get_editor_theme().get_icon("Edit", "EditorIcons")
+	return load("res://addons/godoban/icon.svg")
 
 func _apply_changes() -> void:
 	var s = _store()
