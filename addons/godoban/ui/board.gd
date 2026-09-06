@@ -99,7 +99,7 @@ func _build_per_epic() -> void:
 	add_theme_constant_override("separation", 24)
 	var epics: Array = store.board.epics
 	var groups := {}
-	groups["__none__"] = {"title": "No Epic", "color": T.TEXT_FAINT, "ids": []}
+	groups["__none__"] = {"title": "No Epic", "color": T.TEXT_FAINT(), "ids": []}
 	for e in epics:
 		groups[e.id] = {"title": e.title, "color": Color(e.color), "ids": []}
 	for t in store.board.tasks:
@@ -128,7 +128,7 @@ func _compact_board(key: String, title: String, color: Color, task_ids: Array) -
 	var t := Label.new()
 	t.text = title
 	t.add_theme_font_size_override("font_size", 22)
-	t.add_theme_color_override("font_color", T.TEXT)
+	t.add_theme_color_override("font_color", T.TEXT())
 	header.add_child(t)
 
 	# Arrow points down when expanded, right when collapsed; only the header stays.
@@ -136,10 +136,10 @@ func _compact_board(key: String, title: String, color: Color, task_ids: Array) -
 	arrow.flat = true
 	arrow.icon = T.arrow_icon(not collapsed, 15)
 	arrow.tooltip_text = ("Expand" if collapsed else "Collapse") + " " + title
-	arrow.add_theme_color_override("icon_normal_color", T.TEXT_DIM)
-	arrow.add_theme_color_override("icon_hover_color", T.TEXT)
-	arrow.add_theme_color_override("icon_pressed_color", T.TEXT)
-	arrow.add_theme_color_override("icon_focus_color", T.TEXT_DIM)
+	arrow.add_theme_color_override("icon_normal_color", T.TEXT_DIM())
+	arrow.add_theme_color_override("icon_hover_color", T.TEXT())
+	arrow.add_theme_color_override("icon_pressed_color", T.TEXT())
+	arrow.add_theme_color_override("icon_focus_color", T.TEXT_DIM())
 	arrow.pressed.connect(func():
 		_collapsed_epics[key] = not _collapsed_epics.get(key, false)
 		call_deferred("_rebuild"))
@@ -227,7 +227,7 @@ func _empty_hint(text: String) -> Control:
 	var l := Label.new()
 	l.text = text
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_color_override("font_color", T.TEXT_DIM)
+	l.add_theme_color_override("font_color", T.TEXT_DIM())
 	l.add_theme_font_size_override("font_size", 14)
 	c.add_child(l)
 	return c

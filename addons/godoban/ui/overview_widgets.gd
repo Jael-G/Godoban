@@ -17,8 +17,8 @@ class RingProgress:
 	extends Control
 
 	var value := 0.0        # 0.0..1.0
-	var ring_color := T.ACCENT
-	var track_color := T.BORDER
+	var ring_color := T.ACCENT()
+	var track_color := T.BORDER()
 
 	func _init() -> void:
 		custom_minimum_size = Vector2(46, 46)
@@ -54,7 +54,7 @@ class Donut:
 
 		# A faint full track behind the slices reads as an empty ring and shows up
 		# as the thin separator between slices.
-		draw_arc(c, r, 0.0, TAU, 96, T.BORDER, w, true)
+		draw_arc(c, r, 0.0, TAU, 96, T.BORDER(), w, true)
 
 		var totalv := 0.0
 		for s in segments:
@@ -76,8 +76,8 @@ class Donut:
 				acc += span
 
 		# Center: the big total, with a dim label underneath.
-		_center_string(f, c + Vector2(0, 8), str(total), 24, T.TEXT)
-		_center_string(f, c + Vector2(0, 30), center_title, 12, T.TEXT_DIM)
+		_center_string(f, c + Vector2(0, 8), str(total), 24, T.TEXT())
+		_center_string(f, c + Vector2(0, 30), center_title, 12, T.TEXT_DIM())
 
 	func _center_string(f: Font, pos: Vector2, text: String, fs: int, color: Color) -> void:
 		var wt := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -119,8 +119,8 @@ class VBars:
 			draw_rect(Rect2(x + (slot - bar_w) * 0.5, by, bar_w, h), b.color, true)
 			var cs := str(b.value)
 			draw_string(f, Vector2(x + slot * 0.5 - f.get_string_size(cs, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x * 0.5, by - 4),
-					cs, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, T.TEXT)
+					cs, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, T.TEXT())
 			var lbl := str(b.label)
 			draw_string(f, Vector2(x + slot * 0.5 - f.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x * 0.5, size.y - 6),
-					lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, T.TEXT_DIM)
+					lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, T.TEXT_DIM())
 			x += slot + sep

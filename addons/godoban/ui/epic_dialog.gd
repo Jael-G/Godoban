@@ -31,7 +31,7 @@ func setup(p_store: RefCounted) -> void:
 
 func _build() -> void:
 	title = "Epics"
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 10, 16, 16, 14, 14, 1))
+	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 10, 16, 16, 14, 14, 1))
 
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
@@ -75,7 +75,7 @@ func _build_header() -> Control:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(spacer)
 	_head_count = Label.new()
-	_head_count.add_theme_color_override("font_color", T.TEXT_FAINT)
+	_head_count.add_theme_color_override("font_color", T.TEXT_FAINT())
 	h.add_child(_head_count)
 	return h
 
@@ -121,7 +121,7 @@ func _rebuild_rows() -> void:
 	if _drafts.is_empty():
 		var empty := Label.new()
 		empty.text = "No epics yet — press New epic."
-		empty.add_theme_color_override("font_color", T.TEXT_FAINT)
+		empty.add_theme_color_override("font_color", T.TEXT_FAINT())
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_rows.add_child(empty)
@@ -162,7 +162,7 @@ func _build_row(d: Dictionary, idx: int) -> Control:
 	del.flat = true
 	del.tooltip_text = "Delete"
 	T.flat_button(del)
-	del.add_theme_color_override("icon_normal_color", T.TEXT_FAINT)
+	del.add_theme_color_override("icon_normal_color", T.TEXT_FAINT())
 	del.add_theme_color_override("icon_hover_color", T.OVERDUE)
 	del.add_theme_color_override("icon_pressed_color", T.OVERDUE)
 	del.pressed.connect(_remove_row.bind(d))
@@ -188,7 +188,7 @@ func _on_color(c: Color, d: Dictionary) -> void:
 
 
 func _add_epic() -> void:
-	_drafts.append({"id": "", "title": "", "color": T.ACCENT.to_html(false)})
+	_drafts.append({"id": "", "title": "", "color": T.ACCENT().to_html(false)})
 	_focus_index = _drafts.size() - 1
 	_rebuild_rows()
 

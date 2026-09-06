@@ -10,7 +10,7 @@ signal color_changed(color: Color)
 
 const T = preload("res://addons/godoban/ui/theme.gd")
 
-var _color := T.ACCENT
+var _color := T.ACCENT()
 var _popup: PopupPanel
 var _picker: ColorPicker
 
@@ -52,7 +52,7 @@ func _style(c: Color) -> StyleBoxFlat:
 func _build_popup() -> void:
 	_popup = PopupPanel.new()
 	_popup.exclusive = true
-	_popup.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER, 8, 8, 8, 8, 8, 1))
+	_popup.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER(), 8, 8, 8, 8, 8, 1))
 	_picker = ColorPicker.new()
 	_picker.color = _color
 	_picker.edit_alpha = false

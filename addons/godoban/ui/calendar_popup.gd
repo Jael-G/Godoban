@@ -21,7 +21,7 @@ func _init() -> void:
 
 func _build() -> void:
 	title = "Due date"
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 10, 12, 12, 12, 12, 1))
+	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 10, 12, 12, 12, 12, 1))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	add_child(v)
@@ -31,7 +31,7 @@ func _build() -> void:
 	prev.text = "‹"
 	prev.flat = true
 	T.flat_button(prev)
-	prev.add_theme_color_override("font_color", T.TEXT_DIM)
+	prev.add_theme_color_override("font_color", T.TEXT_DIM())
 	prev.pressed.connect(_shift_month.bind(-1))
 	header.add_child(prev)
 
@@ -44,7 +44,7 @@ func _build() -> void:
 	next.text = "›"
 	next.flat = true
 	T.flat_button(next)
-	next.add_theme_color_override("font_color", T.TEXT_DIM)
+	next.add_theme_color_override("font_color", T.TEXT_DIM())
 	next.pressed.connect(_shift_month.bind(1))
 	header.add_child(next)
 	v.add_child(header)
@@ -56,7 +56,7 @@ func _build() -> void:
 		l.text = d
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.custom_minimum_size = Vector2(24, 0)
-		l.add_theme_color_override("font_color", T.TEXT_DIM)
+		l.add_theme_color_override("font_color", T.TEXT_DIM())
 		dow.add_child(l)
 	v.add_child(dow)
 
@@ -106,7 +106,7 @@ func _rebuild() -> void:
 		b.flat = true
 		b.custom_minimum_size = Vector2(24, 22)
 		T.flat_button(b)
-		b.add_theme_color_override("font_color", T.TEXT)
+		b.add_theme_color_override("font_color", T.TEXT())
 		var ts := _make_ts(_year, _month, day)
 		b.pressed.connect(func(): date_selected.emit(ts); hide())
 		_grid.add_child(b)

@@ -39,7 +39,7 @@ func _build() -> void:
 	custom_minimum_size.x = 340
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER, 0, 16, 16, 14, 14, 1))
+	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER(), 0, 16, 16, 14, 14, 1))
 
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
@@ -57,9 +57,9 @@ func _build() -> void:
 	close.icon = I.icon("x", 14)
 	close.flat = true
 	T.flat_button(close)
-	close.add_theme_color_override("icon_normal_color", T.TEXT_DIM)
-	close.add_theme_color_override("icon_hover_color", T.TEXT)
-	close.add_theme_color_override("icon_pressed_color", T.TEXT)
+	close.add_theme_color_override("icon_normal_color", T.TEXT_DIM())
+	close.add_theme_color_override("icon_hover_color", T.TEXT())
+	close.add_theme_color_override("icon_pressed_color", T.TEXT())
 	close.pressed.connect(_cancel)
 	head.add_child(close)
 	v.add_child(head)
@@ -96,7 +96,7 @@ func _build() -> void:
 	_epic_add.text = "+"
 	_epic_add.flat = true
 	T.flat_button(_epic_add)
-	_epic_add.add_theme_color_override("font_color", T.TEXT_DIM)
+	_epic_add.add_theme_color_override("font_color", T.TEXT_DIM())
 	_epic_add.tooltip_text = "New epic"
 	_epic_add.pressed.connect(func(): new_epic_requested.emit())
 	epic_row.add_child(_epic_add)
@@ -162,7 +162,7 @@ func _build() -> void:
 	_calendar.date_selected.connect(_on_date_selected)
 
 	_confirm = PopupPanel.new()
-	_confirm.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER, 0, 24, 24, 24, 24, 2))
+	_confirm.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER(), 0, 24, 24, 24, 24, 2))
 	_confirm.min_size = Vector2i(440, 0)
 	var cv := VBoxContainer.new()
 	cv.add_theme_constant_override("separation", 14)
@@ -175,7 +175,7 @@ func _build() -> void:
 	msg.text = "Delete this task? This cannot be undone."
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	msg.add_theme_font_size_override("font_size", 14)
-	msg.add_theme_color_override("font_color", T.TEXT_DIM)
+	msg.add_theme_color_override("font_color", T.TEXT_DIM())
 	msg.custom_minimum_size.x = 380
 	cv.add_child(msg)
 	var crow := HBoxContainer.new()
@@ -200,7 +200,7 @@ func _build() -> void:
 func _label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_color_override("font_color", T.TEXT_DIM)
+	l.add_theme_color_override("font_color", T.TEXT_DIM())
 	l.add_theme_font_size_override("font_size", 11)
 	return l
 
@@ -299,7 +299,7 @@ func _refresh_tags() -> void:
 		chip.text = tag + " ✕"
 		chip.flat = true
 		T.flat_button(chip)
-		chip.add_theme_color_override("font_color", T.TEXT_DIM)
+		chip.add_theme_color_override("font_color", T.TEXT())
 		chip.pressed.connect(func(): _tags.erase(tag); call_deferred("_refresh_tags"))
 		_tags_box.add_child(chip)
 
@@ -340,7 +340,7 @@ func _style_danger(b: Button) -> void:
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	for s in ["font_color", "font_hover_color", "font_pressed_color",
 			"font_hover_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(s, T.ACCENT_TEXT)
+		b.add_theme_color_override(s, T.ACCENT_TEXT())
 
 
 func _cancel() -> void:

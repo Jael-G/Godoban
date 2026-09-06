@@ -1,27 +1,75 @@
 @tool
 extends RefCounted
-## Central design tokens + StyleBox helpers. Near-black, flat and minimal —
-## tuned after Linear's dark theme: layered surfaces, a single indigo accent
-## for interactive/active emphasis, and semantic colors for status only. The
-## whole palette lives here so it can't drift between screens.
+## Central design tokens + StyleBox helpers. Chroma resolves from Godot's own
+## editor theme at runtime so the plugin reads as part of the editor — the editor
+## registers its ThemeContext on the root, so any color we don't hard-code falls
+## through to it. Only semantic colors (status, priority, overdue) and user-chosen
+## epic colors stay custom — those are authored for intent, not for theming.
 
-const BG := Color("#0f1011")           # page canvas (darkest layer)
-const BG_PANEL := Color("#14151a")     # columns, toolbars, panels
-const BG_CARD := Color("#1a1c22")      # cards, inputs
-const BG_HOVER := Color("#22252c")     # cards / controls on hover
-const BG_INPUT := Color("#191b20")     # text fields / control surfaces
-const BORDER := Color("#34363f")       # visible borders
-const BORDER_SOFT := Color("#242632")  # subtle separators, card hairlines
-const TEXT := Color("#eef0f3")
-const TEXT_DIM := Color("#9aa1ad")
-const TEXT_FAINT := Color("#5f646d")
-const ACCENT := Color("#5e6ad2")       # signature indigo (actions, active, focus)
-const ACCENT_HOVER := Color("#6b77e6") # accent surfaces on hover
-const ACCENT_TEXT := Color("#f7f8fa")  # text sitting on accent surfaces
-const OVERDUE := Color("#eb5757")
+const I = preload("res://addons/godoban/ui/icons.gd")
+const FONT_PATH := "res://addons/godoban/fonts/geist_variable.ttf"
+static var _theme: Theme
+
+
+## Read a color registered under the editor theme's "Editor" type. Guarded so the
+## script never faults outside the editor (a hedge for any non-`@tool` path).
+## Returns the editor's standard light text as a neutral fallback.
+static func _editor_color(name: String) -> Color:
+	var t := _editor_theme()
+	return t.get_color(name, "Editor") if t != null else Color("#eef0f3")
+
+
+## Dark/light detection from the editor's own constant (1 = dark, 0 = light),
+## falling back to a luminance check outside the editor.
+static func _editor_dark() -> bool:
+	var t := _editor_theme()
+	if t != null:
+		return t.get_constant("dark_theme", "Editor") != 0
+	return Color("#0f1011").get_luminance() < 0.5
+
+
+static func _editor_theme() -> Theme:
+	if Engine.is_editor_hint():
+		return EditorInterface.get_editor_theme()
+	return null
+
+
+## A translucent overlay that reads on both surfaces: white on dark themes, black
+## on light. Used for hover/pressed tints on flat + tab buttons.
+static func _overlay(alpha: float) -> Color:
+	return Color(1, 1, 1, alpha) if _editor_dark() else Color(0, 0, 0, alpha)
+
+
+# --- Surface / chrome tokens ----------------------------------------------------
+# These are runtime data, so each is a static func (not const — GDScript consts are
+# compile-time and the editor palette can change with the theme). Elevation inverts
+# with dark/light, so surfaces are never hard-coded to "near black".
+
+# Page canvas (darkest editor layer) / the editor's dark panel surface.
+static func BG() -> Color: return _editor_color("background")
+static func BG_PANEL() -> Color: return _editor_color("dark_color_1")
+# Cards and inputs sit a step lighter (the editor's base surface).
+static func BG_CARD() -> Color: return _editor_color("base_color")
+static func BG_INPUT() -> Color: return _editor_color("base_color")
+static func BG_HOVER() -> Color:
+	return BG_CARD().lerp(Color.WHITE if _editor_dark() else Color(0.1, 0.1, 0.1), 0.10)
+
+static func BORDER() -> Color: return _editor_color("contrast_color_2")
+static func BORDER_SOFT() -> Color: return _editor_color("separator_color")
+static func TEXT() -> Color: return _editor_color("font_color")
+static func TEXT_DIM() -> Color: return _editor_color("font_placeholder_color")
+static func TEXT_FAINT() -> Color: return _editor_color("font_disabled_color")
+static func ACCENT() -> Color: return _editor_color("accent_color")
+static func ACCENT_HOVER() -> Color: return ACCENT().lerp(TEXT(), 0.12)
+# Text sitting on the accent: white in the dark editor theme, near-black in the
+# light one — mirroring how Godot renders its own accent-colored buttons.
+static func ACCENT_TEXT() -> Color:
+	return Color("#0f1011") if not _editor_dark() else Color.WHITE
+
 
 # Godoban status colors — the popular convention: neutral gray (not started),
-# blue (up next), amber (active), purple (in review), green (done).
+# blue (up next), amber (active), purple (in review), green (done). Kept custom:
+# these are semantic, not chrome.
 const STATUS_COLORS := {
 	"backlog": Color("#6b7280"),
 	"todo": Color("#4a9ff2"),
@@ -35,7 +83,7 @@ static func status_color(status: String) -> Color:
 	return STATUS_COLORS.get(status, Color("#6b7280"))
 
 # Priority colors — a semantic severity scale (green → blue → amber → red) used
-# by the Overview's by-priority bar comparison.
+# by the Overview's by-priority bar comparison. Kept custom for intent.
 const PRIORITY_COLORS := {
 	"low": Color("#3fae74"),
 	"medium": Color("#4a9ff2"),
@@ -47,14 +95,15 @@ const PRIORITY_COLORS := {
 static func priority_color(priority: String) -> Color:
 	return PRIORITY_COLORS.get(priority, Color("#6b7280"))
 
-const I = preload("res://addons/godoban/ui/icons.gd")
-const FONT_PATH := "res://addons/godoban/fonts/geist_variable.ttf"
-static var _theme: Theme
+# Overdue marker — a semantic "error" red, kept literal like the status colors.
+const OVERDUE := Color("#eb5757")
 
 
 ## The shared root theme. Applying this (via `Control.theme`) sets Geist as the
 ## default font + size for every control that inherits it, so individual
-## font_size overrides elsewhere keep working on top. Built lazily + cached.
+## font_size overrides elsewhere keep working on top. Font-only on purpose: no
+## colors are set here, so every color still resolves through to the editor theme.
+## Built lazily + cached.
 static func theme() -> Theme:
 	if _theme == null:
 		_theme = Theme.new()
@@ -65,8 +114,11 @@ static func theme() -> Theme:
 	return _theme
 
 
-static func panel(bg := BG_PANEL, border := BORDER_SOFT, radius := 8,
-		ml := 10, mr := 10, mt := 8, mb := 8, border_w := 1) -> StyleBoxFlat:
+## A flat panel. `bg` and `border` are required so the palette always comes from
+## the caller (which reads the editor theme); the numeric args carry the spacing
+## geometry.
+static func panel(bg: Color, border: Color, radius := 8, ml := 10, mr := 10,
+		mt := 8, mb := 8, border_w := 1) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
 	s.border_color = border
@@ -94,17 +146,16 @@ static func pill(bg: Color, radius := 4) -> StyleBoxFlat:
 
 static func button(b, accent := false) -> void:
 	if accent:
-		# Primary action: solid brand accent with near-white text. Reads as the
-		# one intentional accent on the page rather than a dimmed float.
-		b.add_theme_stylebox_override("normal", panel(ACCENT, ACCENT.lightened(0.08), 6, 12, 12, 5, 5, 1))
-		b.add_theme_stylebox_override("hover", panel(ACCENT_HOVER, ACCENT.lightened(0.10), 6, 12, 12, 5, 5, 1))
-		b.add_theme_stylebox_override("pressed", panel(ACCENT.darkened(0.12), ACCENT.darkened(0.04), 6, 12, 12, 5, 5, 1))
+		# Primary action: solid brand accent with contrasting text.
+		b.add_theme_stylebox_override("normal", panel(ACCENT(), ACCENT().lightened(0.08), 6, 12, 12, 5, 5, 1))
+		b.add_theme_stylebox_override("hover", panel(ACCENT_HOVER(), ACCENT().lightened(0.10), 6, 12, 12, 5, 5, 1))
+		b.add_theme_stylebox_override("pressed", panel(ACCENT().darkened(0.12), ACCENT().darkened(0.04), 6, 12, 12, 5, 5, 1))
 	else:
-		b.add_theme_stylebox_override("normal", panel(BG_INPUT, BORDER, 6, 12, 12, 5, 5, 1))
-		b.add_theme_stylebox_override("hover", panel(BG_HOVER, BORDER, 6, 12, 12, 5, 5, 1))
-		b.add_theme_stylebox_override("pressed", panel(BG_INPUT.darkened(0.08), BORDER_SOFT, 6, 12, 12, 5, 5, 1))
+		b.add_theme_stylebox_override("normal", panel(BG_INPUT(), BORDER(), 6, 12, 12, 5, 5, 1))
+		b.add_theme_stylebox_override("hover", panel(BG_HOVER(), BORDER(), 6, 12, 12, 5, 5, 1))
+		b.add_theme_stylebox_override("pressed", panel(BG_INPUT().darkened(0.08), BORDER_SOFT(), 6, 12, 12, 5, 5, 1))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	var tc := ACCENT_TEXT if accent else TEXT
+	var tc := ACCENT_TEXT() if accent else TEXT()
 	for s in ["font_color", "font_hover_color", "font_pressed_color",
 			"font_hover_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(s, tc)
@@ -112,8 +163,8 @@ static func button(b, accent := false) -> void:
 
 static func flat_button(b) -> void:
 	b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	b.add_theme_stylebox_override("hover", pill(Color(1, 1, 1, 0.06)))
-	b.add_theme_stylebox_override("pressed", pill(Color(1, 1, 1, 0.10)))
+	b.add_theme_stylebox_override("hover", pill(_overlay(0.06)))
+	b.add_theme_stylebox_override("pressed", pill(_overlay(0.10)))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
 
@@ -146,22 +197,22 @@ static func tab_button(b, active := false) -> void:
 	b.add_theme_stylebox_override("normal", panel(
 			Color(1, 1, 1, 0), Color(1, 1, 1, 0), 8, 18, 18, 8, 8, 1))
 	b.add_theme_stylebox_override("hover", panel(
-			Color(1, 1, 1, 0.07), Color(1, 1, 1, 0), 8, 18, 18, 8, 8, 1))
+			_overlay(0.07), Color(1, 1, 1, 0), 8, 18, 18, 8, 8, 1))
 	b.add_theme_stylebox_override("pressed", panel(
-			ACCENT.darkened(0.5), ACCENT.darkened(0.05), 8, 18, 18, 8, 8, 1))
+			ACCENT().darkened(0.5), ACCENT().darkened(0.05), 8, 18, 18, 8, 8, 1))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	var font := ACCENT_TEXT if active else TEXT_DIM
-	var hover_font := ACCENT_TEXT if active else TEXT
+	var font := ACCENT_TEXT() if active else TEXT_DIM()
+	var hover_font := ACCENT_TEXT() if active else TEXT()
 	b.add_theme_color_override("font_color", font)
 	b.add_theme_color_override("font_hover_color", hover_font)
-	b.add_theme_color_override("font_pressed_color", ACCENT_TEXT)
-	b.add_theme_color_override("font_hover_pressed_color", ACCENT_TEXT)
+	b.add_theme_color_override("font_pressed_color", ACCENT_TEXT())
+	b.add_theme_color_override("font_hover_pressed_color", ACCENT_TEXT())
 	b.add_theme_color_override("font_focus_color", font)
 
 
 static func field(control) -> void:
-	control.add_theme_stylebox_override("normal", panel(BG_INPUT, BORDER, 6, 9, 9, 5, 5, 1))
-	control.add_theme_stylebox_override("hover", panel(BG_INPUT, ACCENT.darkened(0.15), 6, 9, 9, 5, 5, 1))
-	control.add_theme_stylebox_override("pressed", panel(BG_INPUT.darkened(0.08), BORDER_SOFT, 6, 9, 9, 5, 5, 1))
-	control.add_theme_stylebox_override("focus", panel(BG_INPUT, ACCENT, 6, 9, 9, 5, 5, 1))
-	control.add_theme_stylebox_override("focus_empty", panel(BG_INPUT, ACCENT, 6, 9, 9, 5, 5, 1))
+	control.add_theme_stylebox_override("normal", panel(BG_INPUT(), BORDER(), 6, 9, 9, 5, 5, 1))
+	control.add_theme_stylebox_override("hover", panel(BG_INPUT(), ACCENT().darkened(0.15), 6, 9, 9, 5, 5, 1))
+	control.add_theme_stylebox_override("pressed", panel(BG_INPUT().darkened(0.08), BORDER_SOFT(), 6, 9, 9, 5, 5, 1))
+	control.add_theme_stylebox_override("focus", panel(BG_INPUT(), ACCENT(), 6, 9, 9, 5, 5, 1))
+	control.add_theme_stylebox_override("focus_empty", panel(BG_INPUT(), ACCENT(), 6, 9, 9, 5, 5, 1))

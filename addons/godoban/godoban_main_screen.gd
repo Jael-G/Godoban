@@ -32,10 +32,60 @@ func _ready() -> void:
 	# Apply the shared theme (Geist default font) to the whole tab; children inherit it.
 	theme = T.theme()
 	_build_ui()
+	_build_overlays()
+
+
+## Builds the task editor + epics dialog once; they persist across chrome rebuilds
+## so an open edit survives a theme change. Added after the chrome so they layer on top.
+func _build_overlays() -> void:
+	if editor != null:
+		return
+	editor = TaskEditor.new()
+	editor.setup(store)
+	editor.visible = false
+	editor.anchor_left = 1.0
+	editor.anchor_right = 1.0
+	editor.anchor_top = 0.0
+	editor.anchor_bottom = 1.0
+	editor.offset_left = -340.0
+	editor.offset_right = 0.0
+	add_child(editor)
+
+	epic_dialog = EpicDialog.new()
+	epic_dialog.setup(store)
+	add_child(epic_dialog)
+	epic_dialog.changed.connect(func(id): editor.refresh_epics(id))
+	editor.new_epic_requested.connect(func(): epic_dialog.open())
+
+
+## Rebuilds the theme-colored chrome when the editor theme changes, keeping the
+## task editor + epics dialog (and any open edit) intact. Colors resolve through
+## the editor theme, so re-applying them repaints every surface.
+func _rebuild_chrome() -> void:
+	for c in get_children():
+		if c == editor or c == epic_dialog:
+			continue
+		remove_child(c)
+		c.free()
+	_pages.clear()
+	_tabs.clear()
+	_build_ui()
+	# Overlays were added before the chrome, so raise them back to the top.
+	if editor != null:
+		move_child(editor, get_child_count() - 1)
+	if epic_dialog != null:
+		move_child(epic_dialog, get_child_count() - 1)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_THEME_CHANGED and editor != null:
+		# Defer so we don't free the child tree mid-notification walk.
+		call_deferred("_rebuild_chrome")
+
 
 func _build_ui() -> void:
 	var bg := ColorRect.new()
-	bg.color = T.BG
+	bg.color = T.BG()
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
@@ -95,29 +145,12 @@ func _build_ui() -> void:
 	root.add_child(overview)
 	_pages["overview"] = overview
 
-	editor = TaskEditor.new()
-	editor.setup(store)
-	editor.visible = false
-	editor.anchor_left = 1.0
-	editor.anchor_right = 1.0
-	editor.anchor_top = 0.0
-	editor.anchor_bottom = 1.0
-	editor.offset_left = -340.0
-	editor.offset_right = 0.0
-	add_child(editor)
-
-	epic_dialog = EpicDialog.new()
-	epic_dialog.setup(store)
-	add_child(epic_dialog)
-	epic_dialog.changed.connect(func(id): editor.refresh_epics(id))
-	editor.new_epic_requested.connect(func(): epic_dialog.open())
-
 	_switch_tab("board")
 
 
 func _build_toolbar() -> Control:
 	var area := PanelContainer.new()
-	var sb := T.panel(T.BG_PANEL, T.BORDER_SOFT, 0, 12, 12, 9, 9, 1)
+	var sb := T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 0, 12, 12, 9, 9, 1)
 	sb.border_width_top = 0
 	sb.border_width_left = 0
 	sb.border_width_right = 0
@@ -175,7 +208,7 @@ func _build_toolbar() -> Control:
 ## Top tab strip: Board / Overview toggles, styled by theme.gd's tab_button.
 func _build_tab_bar() -> Control:
 	var bar := PanelContainer.new()
-	var sb := T.panel(T.BG_PANEL, T.BORDER_SOFT, 0, 12, 12, 9, 9, 1)
+	var sb := T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 0, 12, 12, 9, 9, 1)
 	sb.border_width_top = 0
 	sb.border_width_left = 0
 	sb.border_width_right = 0
@@ -227,7 +260,7 @@ func _on_orientation_toggled(on: bool) -> void:
 ## board/epic and vertical/horizontal toggles.
 func _apply_view_toggle(btn: Button, on: bool, icon_on: String, icon_off: String,
 		label_on: String, label_off: String, tip_on: String, tip_off: String) -> void:
-	var color := T.TEXT if on else T.TEXT_DIM
+	var color := T.TEXT() if on else T.TEXT_DIM()
 	btn.icon = I.icon(icon_on, 18) if on else I.icon(icon_off, 18)
 	btn.text = label_on if on else label_off
 	btn.tooltip_text = tip_on if on else tip_off

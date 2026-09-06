@@ -74,7 +74,7 @@ func _build() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 8, 10, 10, 10, 10, 1))
+	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 10, 10, 10, 10, 1))
 
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
@@ -92,13 +92,13 @@ func _build() -> void:
 	var title := Label.new()
 	title.text = Model.status_title(status)
 	title.add_theme_font_size_override("font_size", 14)
-	title.add_theme_color_override("font_color", T.TEXT)
+	title.add_theme_color_override("font_color", T.TEXT())
 	header.add_child(title)
 
 	_count_label = Label.new()
 	_count_label.text = "0"
 	_count_label.add_theme_font_size_override("font_size", 11)
-	_count_label.add_theme_color_override("font_color", T.TEXT_DIM)
+	_count_label.add_theme_color_override("font_color", T.TEXT_DIM())
 	_count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(_count_label)
@@ -112,7 +112,7 @@ func _build() -> void:
 	add.flat = true
 	add.tooltip_text = "Add task to %s" % Model.status_title(status)
 	T.flat_button(add)
-	add.add_theme_color_override("font_color", T.TEXT_DIM)
+	add.add_theme_color_override("font_color", T.TEXT_DIM())
 	add.add_theme_font_size_override("font_size", 18)
 	add.pressed.connect(func(): add_requested.emit(status))
 	header.add_child(add)
@@ -122,10 +122,10 @@ func _build() -> void:
 		collapse.flat = true
 		collapse.icon = T.arrow_icon(true, 12)
 		collapse.tooltip_text = "Collapse %s" % Model.status_title(status)
-		collapse.add_theme_color_override("icon_normal_color", T.TEXT_DIM)
-		collapse.add_theme_color_override("icon_hover_color", T.TEXT)
-		collapse.add_theme_color_override("icon_pressed_color", T.TEXT)
-		collapse.add_theme_color_override("icon_focus_color", T.TEXT_DIM)
+		collapse.add_theme_color_override("icon_normal_color", T.TEXT_DIM())
+		collapse.add_theme_color_override("icon_hover_color", T.TEXT())
+		collapse.add_theme_color_override("icon_pressed_color", T.TEXT())
+		collapse.add_theme_color_override("icon_focus_color", T.TEXT_DIM())
 		collapse.pressed.connect(func(): collapse_toggled.emit(status, true))
 		header.add_child(collapse)
 
@@ -160,7 +160,7 @@ func _build() -> void:
 	empty_hint.text = "No features"
 	empty_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	empty_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	empty_hint.add_theme_color_override("font_color", T.TEXT_FAINT)
+	empty_hint.add_theme_color_override("font_color", T.TEXT_FAINT())
 	empty_hint.add_theme_font_size_override("font_size", 13)
 
 	_center = CenterContainer.new()
@@ -205,7 +205,7 @@ func _build_collapsed_pill() -> void:
 	custom_maximum_size.x = 32
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 8, 6, 6, 8, 8, 1))
+	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 6, 6, 8, 8, 1))
 	if not show_collapse:
 		return
 
@@ -228,11 +228,11 @@ func _build_collapsed_pill() -> void:
 	# the bottom up gives: bullet, title, count (title + count run bottom-to-top).
 	# The count is rotated to match the title. Keep `_count_label` pointing at the
 	# enclosed Label so set_tasks() can still update it.
-	var count_cell := _vertical_label("0", 11, T.TEXT_DIM)
+	var count_cell := _vertical_label("0", 11, T.TEXT_DIM())
 	_count_label = count_cell.get_child(0) as Label
 	inner.add_child(count_cell)
 
-	var t := _vertical_label(Model.status_title(status), 14, T.TEXT)
+	var t := _vertical_label(Model.status_title(status), 14, T.TEXT())
 	inner.add_child(t)
 
 	var dot := _status_dot()
@@ -247,7 +247,7 @@ func _build_collapsed_pill() -> void:
 func _build_collapsed_row() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 8, 10, 10, 6, 6, 1))
+	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 10, 10, 6, 6, 1))
 	if not show_collapse:
 		return
 
@@ -272,14 +272,14 @@ func _build_collapsed_row() -> void:
 	var title := Label.new()
 	title.text = Model.status_title(status)
 	title.add_theme_font_size_override("font_size", 14)
-	title.add_theme_color_override("font_color", T.TEXT)
+	title.add_theme_color_override("font_color", T.TEXT())
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_child(title)
 
 	_count_label = Label.new()
 	_count_label.text = "0"
 	_count_label.add_theme_font_size_override("font_size", 11)
-	_count_label.add_theme_color_override("font_color", T.TEXT_DIM)
+	_count_label.add_theme_color_override("font_color", T.TEXT_DIM())
 	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_child(_count_label)
 

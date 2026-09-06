@@ -73,12 +73,12 @@ func _title() -> Control:
 	var t := Label.new()
 	t.text = "Overview"
 	t.add_theme_font_size_override("font_size", 18)
-	t.add_theme_color_override("font_color", T.TEXT)
+	t.add_theme_color_override("font_color", T.TEXT())
 	box.add_child(t)
 	var s := Label.new()
 	s.text = "Track the health and progress of your board at a glance."
 	s.add_theme_font_size_override("font_size", 12)
-	s.add_theme_color_override("font_color", T.TEXT_DIM)
+	s.add_theme_color_override("font_color", T.TEXT_DIM())
 	box.add_child(s)
 	return box
 
@@ -146,7 +146,7 @@ func _suffix(total: int, part: int) -> String:
 
 func _stat_card(title: String, big: String, caption: String, frac: float, ring: bool) -> Control:
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 8, 16, 16, 13, 13, 1))
+	card.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 16, 16, 13, 13, 1))
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -157,7 +157,7 @@ func _stat_card(title: String, big: String, caption: String, frac: float, ring: 
 	var t := Label.new()
 	t.text = title
 	t.add_theme_font_size_override("font_size", 12)
-	t.add_theme_color_override("font_color", T.TEXT_DIM)
+	t.add_theme_color_override("font_color", T.TEXT_DIM())
 	box.add_child(t)
 
 	var hr := HBoxContainer.new()
@@ -166,7 +166,7 @@ func _stat_card(title: String, big: String, caption: String, frac: float, ring: 
 	num.text = big
 	num.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	num.add_theme_font_size_override("font_size", 26)
-	num.add_theme_color_override("font_color", T.TEXT)
+	num.add_theme_color_override("font_color", T.TEXT())
 	hr.add_child(num)
 	if ring:
 		var rp := W.RingProgress.new()
@@ -178,7 +178,7 @@ func _stat_card(title: String, big: String, caption: String, frac: float, ring: 
 	var cap := Label.new()
 	cap.text = caption
 	cap.add_theme_font_size_override("font_size", 11)
-	cap.add_theme_color_override("font_color", T.TEXT_FAINT)
+	cap.add_theme_color_override("font_color", T.TEXT_FAINT())
 	box.add_child(cap)
 	return card
 
@@ -227,17 +227,17 @@ func _legend_row(status: String, count: int, total: int) -> Control:
 	l.text = Model.status_title(status)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.add_theme_font_size_override("font_size", 12)
-	l.add_theme_color_override("font_color", T.TEXT_DIM)
+	l.add_theme_color_override("font_color", T.TEXT_DIM())
 	h.add_child(l)
 	var cnt := Label.new()
 	cnt.text = str(count)
 	cnt.add_theme_font_size_override("font_size", 12)
-	cnt.add_theme_color_override("font_color", T.TEXT)
+	cnt.add_theme_color_override("font_color", T.TEXT())
 	h.add_child(cnt)
 	var pct := Label.new()
 	pct.text = "%d%%" % _pct_int(count, total)
 	pct.add_theme_font_size_override("font_size", 12)
-	pct.add_theme_color_override("font_color", T.TEXT_DIM)
+	pct.add_theme_color_override("font_color", T.TEXT_DIM())
 	h.add_child(pct)
 	return h
 
@@ -313,7 +313,7 @@ func _epic_row(e) -> Control:
 	l.text = e.title
 	l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	l.add_theme_font_size_override("font_size", 12)
-	l.add_theme_color_override("font_color", T.TEXT)
+	l.add_theme_color_override("font_color", T.TEXT())
 	h.add_child(l)
 	var total := _epic_count(e.id)
 	var done := _epic_done(e.id)
@@ -328,7 +328,7 @@ func _epic_row(e) -> Control:
 	fill.bg_color = Color(e.color)
 	fill.set_corner_radius_all(4)
 	var track := StyleBoxFlat.new()
-	track.bg_color = T.BORDER
+	track.bg_color = T.BORDER()
 	track.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("fill", fill)
 	bar.add_theme_stylebox_override("background", track)
@@ -336,7 +336,7 @@ func _epic_row(e) -> Control:
 	var cnt := Label.new()
 	cnt.text = "%d/%d" % [done, total]
 	cnt.add_theme_font_size_override("font_size", 12)
-	cnt.add_theme_color_override("font_color", T.TEXT_DIM)
+	cnt.add_theme_color_override("font_color", T.TEXT_DIM())
 	h.add_child(cnt)
 	return h
 
@@ -402,12 +402,12 @@ func _action_card(title: String, count: int, rows: Array) -> Control:
 	t.text = title
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.add_theme_font_size_override("font_size", 13)
-	t.add_theme_color_override("font_color", T.TEXT)
+	t.add_theme_color_override("font_color", T.TEXT())
 	hb.add_child(t)
 	var c := Label.new()
 	c.text = str(count)
 	c.add_theme_font_size_override("font_size", 13)
-	c.add_theme_color_override("font_color", T.TEXT_DIM)
+	c.add_theme_color_override("font_color", T.TEXT_DIM())
 	hb.add_child(c)
 	box.add_child(hb)
 	for r in rows:
@@ -450,7 +450,7 @@ func _upcoming() -> Array:
 ## A base panel card with an internal VBox; callers append content to `card.box`.
 func _card() -> CardPanel:
 	var card := CardPanel.new()
-	card.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL, T.BORDER_SOFT, 8, 16, 16, 14, 14, 1))
+	card.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 16, 16, 14, 14, 1))
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	return card
@@ -460,7 +460,7 @@ func _card_title(text: String) -> Control:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", 13)
-	l.add_theme_color_override("font_color", T.TEXT)
+	l.add_theme_color_override("font_color", T.TEXT())
 	return l
 
 
@@ -472,7 +472,7 @@ func _list_row(text: String) -> Control:
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.clip_text = true
 	l.add_theme_font_size_override("font_size", 12)
-	l.add_theme_color_override("font_color", T.TEXT_DIM)
+	l.add_theme_color_override("font_color", T.TEXT_DIM())
 	return l
 
 
@@ -480,7 +480,7 @@ func _date_header(text: String) -> Control:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", 12)
-	l.add_theme_color_override("font_color", T.TEXT)
+	l.add_theme_color_override("font_color", T.TEXT())
 	return l
 
 
@@ -491,12 +491,12 @@ func _footer_kv(key: String, value: String) -> Control:
 	l.text = key
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.add_theme_font_size_override("font_size", 12)
-	l.add_theme_color_override("font_color", T.TEXT_DIM)
+	l.add_theme_color_override("font_color", T.TEXT_DIM())
 	h.add_child(l)
 	var v := Label.new()
 	v.text = value
 	v.add_theme_font_size_override("font_size", 12)
-	v.add_theme_color_override("font_color", T.TEXT)
+	v.add_theme_color_override("font_color", T.TEXT())
 	h.add_child(v)
 	return h
 

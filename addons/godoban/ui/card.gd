@@ -38,7 +38,7 @@ func setup(p_store: RefCounted, p_task: Model.Task, p_show_epic := true, p_colum
 func _build() -> void:
 	for c in get_children():
 		c.free()
-	_base_style = T.panel(T.BG_CARD, T.BORDER_SOFT, 8, 12, 12, 10, 10, 1)
+	_base_style = T.panel(T.BG_CARD(), T.BORDER_SOFT(), 8, 12, 12, 10, 10, 1)
 	add_theme_stylebox_override("panel", _base_style)
 
 	var v := VBoxContainer.new()
@@ -51,7 +51,7 @@ func _build() -> void:
 	top.add_theme_constant_override("separation", 8)
 	v.add_child(top)
 
-	var title := _lines_label(task.title, T.TEXT, 13, TITLE_LINES)
+	var title := _lines_label(task.title, T.TEXT(), 13, TITLE_LINES)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
 
@@ -60,7 +60,7 @@ func _build() -> void:
 	top.add_child(badge)
 
 	# Description: dim, smaller, always reserving two lines.
-	var desc := _lines_label(task.description, T.TEXT_DIM, 10, DESC_LINES)
+	var desc := _lines_label(task.description, T.TEXT_DIM(), 10, DESC_LINES)
 	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(desc)
 
@@ -134,7 +134,7 @@ func _priority_badge() -> Control:
 func _epic_label() -> Label:
 	var epic = store.board.get_epic(task.epic_id)
 	var title: String = epic.title if epic else task.epic_id
-	var col: Color = Color(epic.color) if epic else T.TEXT_DIM
+	var col: Color = Color(epic.color) if epic else T.TEXT_DIM()
 	var l := _footer_text(title, col, true)
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return l
@@ -145,7 +145,7 @@ func _epic_label() -> Label:
 func _due_label() -> Control:
 	var overdue := task.status != "done" and task.due_date != 0 \
 		and task.due_date < int(Time.get_unix_time_from_system())
-	var col: Color = T.OVERDUE if overdue else T.TEXT_DIM
+	var col: Color = T.OVERDUE if overdue else T.TEXT_DIM()
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", -1)
 	row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -162,13 +162,18 @@ func _due_label() -> Control:
 	return row
 
 
-## A small tag pill (has a tight background).
+## A small tag pill (has a tight background). The pill is a faint tint of the
+## foreground and the text is the opaque foreground: Godot's editor text colors
+## carry alpha (font_color is white at 0.75, placeholder at 0.35), so stacking a
+## translucent tag on a translucent background washed it into its own pill. Making
+## the text opaque keeps tags legible in both dark and light themes.
 func _pill(text: String) -> Control:
-	var col := T.TEXT_DIM
+	var txt := T.TEXT()
+	txt.a = 1.0
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", _tint_pill(Color(col, 0.20)))
+	p.add_theme_stylebox_override("panel", _tint_pill(Color(txt, 0.12)))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.add_child(_pill_text(text, col))
+	p.add_child(_pill_text(text, txt))
 	return p
 
 
@@ -176,7 +181,7 @@ func _pill_text(text: String, col: Color) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", 9)
-	l.add_theme_color_override("font_color", col.lightened(0.5))
+	l.add_theme_color_override("font_color", col)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -215,8 +220,8 @@ func _on_hover(hovered: bool) -> void:
 	if _base_style == null:
 		return
 	var s: StyleBoxFlat = _base_style.duplicate()
-	s.bg_color = T.BG_HOVER if hovered else _base_style.bg_color
-	s.border_color = T.BORDER if hovered else _base_style.border_color
+	s.bg_color = T.BG_HOVER() if hovered else _base_style.bg_color
+	s.border_color = T.BORDER() if hovered else _base_style.border_color
 	add_theme_stylebox_override("panel", s)
 
 
@@ -245,12 +250,12 @@ func _get_drag_data(_at: Vector2) -> Variant:
 
 func _make_preview() -> Control:
 	var preview := PanelContainer.new()
-	var style := T.panel(T.BG_CARD, _priority_color(), 6, 10, 10, 8, 8, 1)
+	var style := T.panel(T.BG_CARD(), _priority_color(), 6, 10, 10, 8, 8, 1)
 	style.border_width_left = 3
 	preview.add_theme_stylebox_override("panel", style)
 	var l := Label.new()
 	l.text = task.title
-	l.add_theme_color_override("font_color", T.TEXT)
+	l.add_theme_color_override("font_color", T.TEXT())
 	preview.add_child(l)
 	preview.custom_minimum_size = Vector2(size.x, 0)
 	return preview
