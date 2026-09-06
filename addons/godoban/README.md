@@ -53,6 +53,10 @@ dependency, so nothing ships in your exported game.
 - By-status donut, priority bars, per-epic progress, and actionable lists
   (overdue, no-epic, upcoming).
 
+**Editor-native theme**
+- Matches your current editor theme — dark or light — so the board reads as native to the editor.
+- The palette auto-syncs on every theme change.
+
 ## Data
 
 Tasks are stored in **`res://godoban_data.json`** in your project root:
