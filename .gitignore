@@ -13,3 +13,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.code-workspace
+
+# Claude Code local state.
+.claude/
+CLAUDE.md
