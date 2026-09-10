@@ -8,7 +8,6 @@ extends PopupPanel
 
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
-const GodobanStore = preload("res://addons/godoban/data/godoban_store.gd")
 
 var store: RefCounted
 var _import_dialog: FileDialog
@@ -163,7 +162,6 @@ func _rebuild_rows() -> void:
 
 func _build_row(entry: Dictionary) -> Control:
 	var current: bool = String(entry["id"]) == store.current_board_id()
-	var is_builtin := String(entry["path"]).begins_with(GodobanStore.BOARDS_DIR)
 
 	var row := PanelContainer.new()
 	var row_normal := T.row_surface()
@@ -192,23 +190,26 @@ func _build_row(entry: Dictionary) -> Control:
 	marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(marker)
 
+	var full_name := String(entry["name"])
 	var label := Label.new()
-	label.text = String(entry["name"])
+	# No character budget: the label simply takes whatever width the row has left and clips
+	# there, so the name lines up exactly with the LineEdit that replaces it in edit mode and
+	# the trailing buttons keep their spot at any length. See `_contain_label`.
+	label.text = full_name
 	label.add_theme_color_override("font_color", T.ACCENT() if current else T.TEXT())
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_contain_label(label)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(label)
 
-	# Imports may live outside BOARDS_DIR — show their file name so it's clear
-	# where the board's data actually is. Managed boards stay minimal.
-	var sub: Label = null
-	if not is_builtin:
-		sub = Label.new()
-		sub.text = String(entry["path"]).get_file()
-		sub.add_theme_color_override("font_color", T.TEXT_FAINT())
-		sub.add_theme_font_size_override("font_size", 11)
-		sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		h.add_child(sub)
+	# The row carries the name and nothing else: the file it lives in is registry detail, and
+	# a second label next to the name only stole width from it (the switcher's job is picking
+	# a board, not auditing paths — the store already reports a missing file on switch).
+	# Tooltip goes on the *row*, not the label: the labels are mouse-Ignore, and Godot skips
+	# those when hunting for a tooltip, so one set on the label would never fire. Re-evaluated
+	# on every resize, since whether the name is trimmed depends on the width, not the text.
+	label.resized.connect(func(): row.tooltip_text = _name_tooltip(label))
+	row.tooltip_text = _name_tooltip(label)
 
 	# Inline rename is a swap: a read-only name label (interactive row) vs. an editable
 	# group (LineEdit + green accept / red cancel). Only one is visible at a time; the
@@ -245,14 +246,11 @@ func _build_row(entry: Dictionary) -> Control:
 
 	# Toggle between view (label + actions) and edit (LineEdit + accept/cancel). When
 	# entering edit, seed the field from the entry and focus it once it's mounted.
-	# `sub` may be null for managed boards — guard the lookup.
 	var set_edit := func(on: bool) -> void:
 		edit_box.visible = on
 		label.visible = not on
 		pencil_btn.visible = not on
 		remove_btn.visible = not on
-		if sub != null:
-			sub.visible = not on
 		if on:
 			name_edit.text = String(entry["name"])
 			name_edit.call_deferred("grab_focus")
@@ -303,6 +301,30 @@ func _remove(entry: Dictionary) -> void:
 	store.remove_board(String(entry["id"]))
 	# Defer: free() can't run while this row's button is still emitting its `pressed` signal.
 	call_deferred("_rebuild_rows")
+
+
+## Make a row's name label take the width it's given instead of demanding its text's width.
+## `clip_text` is what does it (measured: it drops the label's minimum width to ~1px, so the
+## HBox can always fit the panel and the trailing buttons hold their spot); the overrun
+## behavior only decides how the cut looks — an ellipsis rather than a hard chop.
+## Pair with `SIZE_EXPAND_FILL`, which is what makes the label fill the leftover width.
+func _contain_label(l: Label) -> void:
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.clip_text = true
+
+
+## The tooltip a row should carry: the full name while its label is too narrow to show it,
+## empty while it fits. Measured against the label's own font rather than counted in
+## characters, so it reflects what's actually rendered; before the first layout pass the
+## label has no width yet, so assume trimmed and let the `resized` hook correct it.
+func _name_tooltip(label: Label) -> String:
+	if label.size.x <= 0.0:
+		return label.text
+	var font := label.get_theme_font("font")
+	var font_size := label.get_theme_font_size("font_size")
+	var text_w := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	return label.text if text_w > label.size.x else ""
 
 
 ## A small flat icon-only button: no background/border, a hand cursor, and a tooltip.

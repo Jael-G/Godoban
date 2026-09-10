@@ -71,6 +71,15 @@ static func ACCENT_HOVER() -> Color: return ACCENT().lerp(TEXT(), 0.12)
 # light one — mirroring how Godot renders its own accent-colored buttons.
 static func ACCENT_TEXT() -> Color:
 	return Color("#0f1011") if not _editor_dark() else Color.WHITE
+# Display-only shortening for single-line surfaces whose width must not follow their text
+# (the board chip, the switcher rows): anything past `max_chars` is dropped and an ellipsis
+# appended. Character-based rather than width-based, so callers get a hard, predictable
+# ceiling regardless of the glyphs involved; the full string stays in the data and in the
+# caller's tooltip. Never write this back to the model — it's presentation only.
+static func elide(text: String, max_chars: int) -> String:
+	if max_chars < 2 or text.length() <= max_chars:
+		return text
+	return text.substr(0, max_chars - 1).strip_edges() + "…"
 
 
 # Godoban status colors — the popular convention: neutral gray (not started),

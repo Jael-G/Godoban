@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.1.1] - 2026-09-09
+
+### Fixed
+
+- **Very long board names no longer take over the UI.** The toolbar chip shortens the name to a fixed
+  character budget (the full name moves to the chip's tooltip) instead of stretching until it pushes
+  the view tabs off the bar, and board-switcher rows clip their name with an ellipsis instead of
+  widening the row until the switch / rename / remove buttons leave the popup.
+
+### Changed
+
+- Board switcher rows are name-only: the file-name label under imported boards is gone (where a board's
+  file lives is registry detail, not how you pick one — a missing file is still reported on switch),
+  and a row's tooltip now carries the full name whenever the row had to trim it.
+- Added more spacing between the board chip and the Board / Overview tabs.
+
 ## [1.1.0] - 2026-09-09
 
 ### Added

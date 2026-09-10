@@ -16,6 +16,10 @@ const BoardSwitcher = preload("res://addons/godoban/ui/board_switcher.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
 
+## How much of the board name the toolbar chip shows before it's elided. Kept small: the
+## chip shares the bar with the view tabs, so its width is a budget, not a preference.
+const CHIP_NAME_MAX_CHARS := 20
+
 var store: GodobanStore
 var board: Board
 var editor: TaskEditor
@@ -228,7 +232,19 @@ func _apply_board_state() -> void:
 	if has_board:
 		_switch_tab(_active_tab)
 	if _chip_name_label != null:
-		_chip_name_label.text = store.board_name if store.board_name != "" else "Board"
+		_set_chip_name()
+
+
+## Write the current board's name into the chip, elided to a fixed character budget and
+## with the untruncated name parked in the tooltip. The chip is a fixed affordance in the
+## toolbar — without a cap a long name stretches the pill across the bar and pushes the
+## view tabs out of reach.
+func _set_chip_name() -> void:
+	var full_name: String = store.board_name if store.board_name != "" else "Board"
+	_chip_name_label.text = T.elide(full_name, CHIP_NAME_MAX_CHARS)
+	# Only worth a tooltip when it's actually hiding something; otherwise keep the
+	# "Switch board" hint that explains what the chip does.
+	_board_chip.tooltip_text = full_name if _chip_name_label.text != full_name else "Switch board"
 
 
 func _build_toolbar() -> Control:
@@ -306,6 +322,14 @@ func _build_tab_bar() -> Control:
 	# board am I on", not as a tab. Clicking it opens the board switcher.
 	h.add_child(_build_board_chip())
 
+	# Extra air between the chip and the view tabs — the bar's own 4px makes them read as one
+	# cluster, and they're two different kinds of control (which board vs. which page). Fixed
+	# width, so only the chip→tabs gap widens; the tabs keep their tight 4px pairing.
+	# Net gap is this plus the bar's separation on either side.
+	var chip_gap := Control.new()
+	chip_gap.custom_minimum_size = Vector2(8, 0)
+	h.add_child(chip_gap)
+
 	_tabs["board"] = _add_tab(h, "Board")
 	_tabs["overview"] = _add_tab(h, "Overview")
 	return bar
@@ -317,6 +341,8 @@ func _build_tab_bar() -> Control:
 ## children are mouse-Ignore so clicks land on the chip itself.
 func _build_board_chip() -> Control:
 	var chip := PanelContainer.new()
+	# Assigned before the label is built so `_set_chip_name` can reach the chip's tooltip.
+	_board_chip = chip
 	# PanelContainer draws only the "panel" stylebox (it has no normal/hover/pressed
 	# Button states), so the border + fill live there; hover is wired manually.
 	var panel_normal := T.panel(T.BG_INPUT(), T.BORDER_STRONG(), 10, 11, 11, 5, 5, 1)
@@ -324,7 +350,8 @@ func _build_board_chip() -> Control:
 	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	chip.add_theme_stylebox_override("panel", panel_normal)
 	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	chip.tooltip_text = "Switch board"
+	# tooltip_text is owned by `_set_chip_name` (below): it shows the full board name when
+	# the chip had to elide it, and the "Switch board" hint otherwise.
 	chip.mouse_entered.connect(func(): chip.add_theme_stylebox_override("panel", panel_hover))
 	chip.mouse_exited.connect(func(): chip.add_theme_stylebox_override("panel", panel_normal))
 	chip.gui_input.connect(_on_chip_input)
@@ -345,7 +372,7 @@ func _build_board_chip() -> Control:
 	hb.add_child(icon)
 
 	_chip_name_label = Label.new()
-	_chip_name_label.text = store.board_name if store.board_name != "" else "Board"
+	_set_chip_name()
 	_chip_name_label.add_theme_font_size_override("font_size", 16)
 	_chip_name_label.add_theme_font_override("font", T.title_font(0.7, 1.0))
 	_chip_name_label.add_theme_color_override("font_color", T.TEXT())
@@ -459,11 +486,13 @@ func _on_board_switched(_id: String) -> void:
 
 
 ## The current board was renamed in-place (no switch): repaint just the chip label.
-func _on_board_renamed(board_id: String, board_name: String) -> void:
+func _on_board_renamed(board_id: String, _board_name: String) -> void:
 	if board_id != store.current_board_id():
 		return
 	if _chip_name_label != null:
-		_chip_name_label.text = board_name if board_name != "" else "Board"
+		# Through the same elide path as every other chip repaint — a rename is exactly how
+		# an over-long name gets in here in the first place.
+		_set_chip_name()
 
 
 ## Show a small centered message popup (currently: a refused duplicate import). Owned
