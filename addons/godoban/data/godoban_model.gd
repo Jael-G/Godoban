@@ -112,6 +112,7 @@ class Task:
 class Board:
 	extends RefCounted
 
+	var name := ""
 	var next_id := 1
 	var epics: Array = []
 	var tasks: Array = []
@@ -163,6 +164,7 @@ class Board:
 		for t in tasks:
 			task_arr.append(t.to_dict())
 		return {
+			"name": name,
 			"next_id": next_id,
 			"epics": epic_arr,
 			"tasks": task_arr,
@@ -170,6 +172,7 @@ class Board:
 
 	static func from_dict(d: Dictionary) -> Board:
 		var b := Board.new()
+		b.name = str(d.get("name", "My Board"))
 		b.next_id = int(d.get("next_id", 1))
 		for e in d.get("epics", []):
 			if e is Dictionary:

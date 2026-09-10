@@ -56,6 +56,12 @@ static func BG_HOVER() -> Color:
 
 static func BORDER() -> Color: return _editor_color("contrast_color_2")
 static func BORDER_SOFT() -> Color: return _editor_color("separator_color")
+# A border with real contrast against the surface, for places where the border IS the
+# affordance (the clickable board chip). contrast_color_2 is meant to stay faint, so at
+# 1px it vanishes into base_color; this lifts (dark) / drops (light) from the chip's own
+# background so the outline reads clearly in both themes.
+static func BORDER_STRONG() -> Color:
+	return BG_INPUT().lerp(Color.WHITE if _editor_dark() else Color(0, 0, 0), 0.30)
 static func TEXT() -> Color: return _editor_color("font_color")
 static func TEXT_DIM() -> Color: return _editor_color("font_placeholder_color")
 static func TEXT_FAINT() -> Color: return _editor_color("font_disabled_color")
@@ -112,6 +118,20 @@ static func theme() -> Theme:
 		if f != null:
 			_theme.default_font = f
 	return _theme
+
+
+## A bold, gently letter-spaced FontVariation for prominent labels (the board chip,
+## dialog titles). Uses the theme's Geist face so the embolden matches the same
+## family, plus a small tracking (spacing_glyph) to help it read as a heading
+## rather than body text. Callers set `font_size` separately via a size override.
+static func title_font(embolden := 0.7, spacing := 1.0) -> FontVariation:
+	var fv := FontVariation.new()
+	var base := load(FONT_PATH) as FontFile
+	if base != null:
+		fv.base_font = base
+	fv.variation_embolden = embolden
+	fv.spacing_glyph = spacing
+	return fv
 
 
 ## A flat panel. `bg` and `border` are required so the palette always comes from

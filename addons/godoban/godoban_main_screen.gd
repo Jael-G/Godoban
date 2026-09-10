@@ -12,6 +12,7 @@ const TaskEditor = preload("res://addons/godoban/ui/task_editor.gd")
 const EpicDialog = preload("res://addons/godoban/ui/epic_dialog.gd")
 const FiltersBar = preload("res://addons/godoban/ui/filters_bar.gd")
 const Overview = preload("res://addons/godoban/ui/overview.gd")
+const BoardSwitcher = preload("res://addons/godoban/ui/board_switcher.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
 
@@ -21,10 +22,22 @@ var editor: TaskEditor
 var epic_dialog: EpicDialog
 var filters_bar: FiltersBar
 var overview: Overview
+var board_switcher: BoardSwitcher
+var _import_dialog: FileDialog
+var _message_box: PopupPanel
+var _message_label: Label
 var _epic_toggle: Button
 var _orientation_toggle: Button
+var _board_chip: Control
+var _chip_name_label: Label
 var _pages: Dictionary = {}
 var _tabs: Dictionary = {}
+# Board+Overview live in `_content` so the whole thing can be hidden when no board is
+# loaded; `_empty_state` takes its place. `_active_tab` tracks the last shown tab so a
+# switch from zero→board restores it.
+var _content: Control
+var _empty_state: Control
+var _active_tab := "board"
 
 func _ready() -> void:
 	store = GodobanStore.new()
@@ -57,24 +70,52 @@ func _build_overlays() -> void:
 	epic_dialog.changed.connect(func(id): editor.refresh_epics(id))
 	editor.new_epic_requested.connect(func(): epic_dialog.open())
 
+	# The import file picker lives here, not inside the popup, so it stays open even
+	# if the popup closes on an outside click mid-selection.
+	_import_dialog = FileDialog.new()
+	_import_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_import_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_import_dialog.title = "Import a board"
+	_import_dialog.filters = PackedStringArray(["*.json ; Godoban board"])
+	add_child(_import_dialog)
+
+	board_switcher = BoardSwitcher.new()
+	board_switcher.setup(store, _import_dialog)
+	add_child(board_switcher)
+	# Switching boards: refresh the chip and clear any open task editor so a stray
+	# "Save" can't create a bogus task in the new board.
+	store.board_switched.connect(_on_board_switched)
+	# Renaming the *current* board also renames the chip label. Non-current boards don't
+	# affect the chip; their rows/internal name are refreshed by the switcher's rebuild.
+	store.board_renamed.connect(_on_board_renamed)
+	# A refused (duplicate) import surfaces here; the message popup is owned here rather
+	# than by the switcher, so it stays up after the switcher hides. A missing board
+	# needs no popup — the switcher just drops it from the list.
+	store.board_import_rejected.connect(func(): show_message("That board is already on the list."))
+
 
 ## Rebuilds the theme-colored chrome when the editor theme changes, keeping the
 ## task editor + epics dialog (and any open edit) intact. Colors resolve through
 ## the editor theme, so re-applying them repaints every surface.
 func _rebuild_chrome() -> void:
 	for c in get_children():
-		if c == editor or c == epic_dialog:
+		if c == editor or c == epic_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
 			continue
 		remove_child(c)
 		c.free()
 	_pages.clear()
 	_tabs.clear()
+	_chip_name_label = null
 	_build_ui()
 	# Overlays were added before the chrome, so raise them back to the top.
 	if editor != null:
 		move_child(editor, get_child_count() - 1)
 	if epic_dialog != null:
 		move_child(epic_dialog, get_child_count() - 1)
+	if board_switcher != null:
+		move_child(board_switcher, get_child_count() - 1)
+	if _import_dialog != null:
+		move_child(_import_dialog, get_child_count() - 1)
 
 
 func _notification(what: int) -> void:
@@ -97,13 +138,21 @@ func _build_ui() -> void:
 
 	root.add_child(_build_tab_bar())
 
+	# Board + Overview live inside a single content wrapper so it can be hidden wholesale
+	# when there's no current board; the empty state takes its place below.
+	_content = VBoxContainer.new()
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content.add_theme_constant_override("separation", 0)
+	root.add_child(_content)
+
 	# --- Board tab ---
 	var board_page := VBoxContainer.new()
 	board_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	board_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# Gap between the toolbar and the board columns.
 	board_page.add_theme_constant_override("separation", 12)
-	root.add_child(board_page)
+	_content.add_child(board_page)
 	_pages["board"] = board_page
 
 	board_page.add_child(_build_toolbar())
@@ -142,10 +191,44 @@ func _build_ui() -> void:
 	overview.setup(store)
 	overview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	overview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(overview)
+	_content.add_child(overview)
 	_pages["overview"] = overview
 
-	_switch_tab("board")
+	# The zero-board placeholder, shown in place of the content wrapper.
+	_empty_state = _build_empty_state()
+	root.add_child(_empty_state)
+
+	_apply_board_state()
+
+
+## The zero-board placeholder: a single centered hint (no buttons) that points the user to
+## the board chip to create or import one. Matches the `_empty_hint` styling in board.gd.
+func _build_empty_state() -> Control:
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var label := Label.new()
+	label.text = "No board yet.\nClick the board chip above to create or import one."
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", T.TEXT_DIM())
+	label.add_theme_font_size_override("font_size", 14)
+	center.add_child(label)
+	return center
+
+
+## Reflect whether a board is loaded: show the board+overview content (and the view tabs)
+## when there is one, or the empty state when there is none. Keeps the two states in sync
+## after a switch, rename, or a zero→board transition (create/import).
+func _apply_board_state() -> void:
+	var has_board := store.current_board_id() != ""
+	_content.visible = has_board
+	_empty_state.visible = not has_board
+	for t in _tabs.values():
+		t.visible = has_board
+	if has_board:
+		_switch_tab(_active_tab)
+	if _chip_name_label != null:
+		_chip_name_label.text = store.board_name if store.board_name != "" else "Board"
 
 
 func _build_toolbar() -> Control:
@@ -218,9 +301,68 @@ func _build_tab_bar() -> Control:
 	h.add_theme_constant_override("separation", 4)
 	bar.add_child(h)
 
+	# The board chip leads the bar (left of the view tabs). It's a *data* control,
+	# deliberately styled differently from the page toggles so it reads as "which
+	# board am I on", not as a tab. Clicking it opens the board switcher.
+	h.add_child(_build_board_chip())
+
 	_tabs["board"] = _add_tab(h, "Board")
 	_tabs["overview"] = _add_tab(h, "Overview")
 	return bar
+
+
+## A clickable chip showing the current board's name with a chevron hint + hover
+## highlight. Built as a PanelContainer (not a Button) so it can freely lay out
+## icon + label + chevron while the whole surface stays one click target; the
+## children are mouse-Ignore so clicks land on the chip itself.
+func _build_board_chip() -> Control:
+	var chip := PanelContainer.new()
+	# PanelContainer draws only the "panel" stylebox (it has no normal/hover/pressed
+	# Button states), so the border + fill live there; hover is wired manually.
+	var panel_normal := T.panel(T.BG_INPUT(), T.BORDER_STRONG(), 10, 11, 11, 5, 5, 1)
+	var panel_hover := T.panel(T.BG_HOVER(), T.BORDER_STRONG(), 10, 11, 11, 5, 5, 1)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.add_theme_stylebox_override("panel", panel_normal)
+	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	chip.tooltip_text = "Switch board"
+	chip.mouse_entered.connect(func(): chip.add_theme_stylebox_override("panel", panel_hover))
+	chip.mouse_exited.connect(func(): chip.add_theme_stylebox_override("panel", panel_normal))
+	chip.gui_input.connect(_on_chip_input)
+
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 7)
+	hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.add_child(hb)
+
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(18, 18)
+	icon.texture = I.icon("kanban", 18)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.modulate = T.TEXT()
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.add_child(icon)
+
+	_chip_name_label = Label.new()
+	_chip_name_label.text = store.board_name if store.board_name != "" else "Board"
+	_chip_name_label.add_theme_font_size_override("font_size", 16)
+	_chip_name_label.add_theme_font_override("font", T.title_font(0.7, 1.0))
+	_chip_name_label.add_theme_color_override("font_color", T.TEXT())
+	_chip_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.add_child(_chip_name_label)
+
+	var chev := TextureRect.new()
+	chev.custom_minimum_size = Vector2(20, 20)
+	chev.texture = I.icon("chevron-down", 20)
+	chev.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	chev.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	chev.modulate = T.TEXT()
+	chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.add_child(chev)
+
+	_board_chip = chip
+	return chip
 
 
 func _add_tab(parent: Control, text: String) -> Button:
@@ -235,7 +377,9 @@ func _add_tab(parent: Control, text: String) -> Button:
 
 
 ## Shows exactly one page and updates the matching tab's pressed + style state.
+## Records the choice in `_active_tab` so a zero→board switch can restore the last tab.
 func _switch_tab(page: String) -> void:
+	_active_tab = page
 	for k in _pages:
 		_pages[k].visible = (k == page)
 	for k in _tabs:
@@ -289,6 +433,72 @@ func _apply_orientation_toggle() -> void:
 			"rows-2", "columns-2", "Rows", "Columns",
 			"Rows — cards flow horizontally, one row per status",
 			"Columns — cards stack in vertical columns (classic)")
+
+
+func _on_chip_input(e: InputEvent) -> void:
+	if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+		_open_board_switcher()
+
+
+func _open_board_switcher() -> void:
+	if _board_chip == null or board_switcher == null:
+		return
+	var r := _board_chip.get_global_rect()
+	board_switcher.open(Rect2i(r.position, r.size))
+
+
+## A board was just switched (or the last one removed): repaint the whole state — chip,
+## view tabs, and content vs. empty state — and clear any open task editor, so a lingering
+## "Save" can't write a stale task into the new board.
+func _on_board_switched(_id: String) -> void:
+	_apply_board_state()
+	if editor != null:
+		editor.hide()
+	if filters_bar != null:
+		filters_bar.reset_scope()
+
+
+## The current board was renamed in-place (no switch): repaint just the chip label.
+func _on_board_renamed(board_id: String, board_name: String) -> void:
+	if board_id != store.current_board_id():
+		return
+	if _chip_name_label != null:
+		_chip_name_label.text = board_name if board_name != "" else "Board"
+
+
+## Show a small centered message popup (currently: a refused duplicate import). Owned
+## here — not by the board switcher — so it stays up after the switcher hides
+## itself following the action that triggered the message. Deferred: we may be inside a
+## gui_input signal handler (a board row click), so opening the popup this frame can be
+## swallowed; pop it on the next idle frame instead.
+func show_message(text: String) -> void:
+	if _message_box == null:
+		_build_message_box()
+	_message_label.text = text
+	call_deferred("_popup_message")
+
+
+func _popup_message() -> void:
+	_message_box.popup_centered()
+
+
+func _build_message_box() -> void:
+	_message_box = PopupPanel.new()
+	_message_box.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 14, 14, 12, 12, 1))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	_message_box.add_child(v)
+	_message_label = Label.new()
+	_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_message_label.custom_minimum_size = Vector2(280, 0)
+	v.add_child(_message_label)
+	var ok := Button.new()
+	ok.text = "OK"
+	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	T.button(ok)
+	ok.pressed.connect(func(): _message_box.hide())
+	v.add_child(ok)
+	add_child(_message_box)
 
 
 func _open_editor(task_id: String, status: String) -> void:

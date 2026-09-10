@@ -131,6 +131,15 @@ func _select_by_metadata(btn: OptionButton, value: String) -> void:
 	btn.select(0)
 
 
+## Clear the board-scoped dropdowns (epic + label) and re-emit, so a filter from one
+## board can't hide every task after we switch to a board that lacks that epic/label.
+## General filters (search, sort, priority, date) are left alone.
+func reset_scope() -> void:
+	_epic.select(0)
+	_label.select(0)
+	_emit()
+
+
 func get_filters() -> Dictionary:
 	return {
 		"search": _search.text.strip_edges(),

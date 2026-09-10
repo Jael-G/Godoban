@@ -28,6 +28,14 @@
   <a href="#-license"><kbd>📄 License</kbd></a>
 </p>
 
+> [!IMPORTANT]
+> **Migrating from a version that predates multiple boards?** Godoban 1.1.0 stores one JSON file per
+> board and no longer reads the old single-file layout, so older boards must be brought in by hand:
+>
+> - **Import your old board.** Click the board chip in the toolbar
+>   → **Import board** and point at your previous JSON (wherever you kept it, including a
+>   `res://godoban_data.json` at the project root).
+
 
 ---
 
@@ -73,6 +81,25 @@
 ---
 
 ## 📖 Features
+
+### 🗃️ Multiple Boards
+
+Keep every project's work in its own board and switch between them instantly.
+
+<details>
+<summary><strong>See all multiple-board features</strong></summary>
+
+| Feature | Description |
+|---|---|
+| **Board Chip** | The active board's name sits in the toolbar as a bold, letter-spaced chip; click it to switch, create, or import a board. |
+| **Board Switcher** | One popup lists every known board (click to switch), plus **New board** and **Import board**. |
+| **Per-Board Files** | Each board is its own named JSON under `res://godoban_boards/`, indexed by a `boards.json` registry (id → name → path) that also marks the current board. |
+| **Import by Reference** | Imported boards stay wherever you pick and are referenced by path — never copied into the folder. |
+| **Rename** | Each board row has a pencil that turns the name into an inline editor (green ✓ accept / red ✗ cancel). It updates the list entry and the board's JSON `name` field in place; the file itself is never renamed or moved. |
+| **Remove from List** | Each board row has an "×" that unregisters it from the list. The file is **never** deleted — the board just stops being tracked and can be re-imported later. Removing the last board shows a "No board yet" empty state (it never auto-creates a default). |
+| **Easy Switching** | Switching boards rebuilds every view, filter, and chart for the active board automatically. |
+
+</details>
 
 ### 🗂️ Board & Tasks
 
@@ -192,16 +219,20 @@ Godoban is a self-contained editor plugin. You can drop it straight into any God
 3. Enable **Godoban**.
 
 > [!TIP]
-> A **Godoban** tab appears next to 2D / 3D / Script. Open it and click **"＋ New Task"** to populate your
-> first board.
+> A **Godoban** tab appears next to 2D / 3D / Script. On first run it shows a **"No board yet"** empty
+> state — Godoban never creates a board for you. Click the board chip in the top bar to **New board**
+> or **Import board** and get started.
 
 ---
 
 ## 💾 Data & Persistence
 
-- Tasks are stored in a **pretty-printed JSON file** at `res://godoban_data.json` in your project root.
-- It's **created on first run** and saved on every change (debounced ~0.5s), plus on editor save and exit.
+- Boards live under **`res://godoban_boards/`**: each board is its own pretty-printed JSON file (recording the board's `name`), indexed by a `boards.json` **registry** that maps each board id → name → path and marks which board is current.
+- **Imported** boards stay wherever you picked them and are referenced by path — they're *not* moved into the folder.
+- Saved on every change (debounced ~0.5s), plus on editor save/exit, and before any board switch so no edits are lost.
+- **Removing a board from the list only unregisters it — Godoban never deletes the underlying file.** To permanently delete a board, remove its file yourself; the board then just stops showing on the list.
 - The JSON is **git-diffable** and easy to hand-edit or move between machines.
+- A board file with no `"name"` field is imported as **"My Board"**; rename it anytime with the pencil on its row in the switcher.
 
 ---
 
@@ -211,7 +242,7 @@ Godoban is a self-contained editor plugin. You can drop it straight into any God
 |---|---|
 | **Engine** | [Godot 4.7](https://godotengine.org) |
 | **Language** | GDScript (`@tool`, runs in the editor) |
-| **Persistence** | Pretty-printed JSON via `FileAccess` + `JSON` |
+| **Persistence** | Per-board pretty-printed JSON + a `boards.json` registry, via `FileAccess` + `JSON` |
 | **UI** | Native `Control` nodes, no scene files — the whole board is built in code |
 | **Design System** | Editor-native theme (`theme.gd`, resolves colors from Godot's editor theme) + rasterized SVG glyphs (`icons.gd`) |
 
@@ -229,7 +260,7 @@ addons/godoban/
 ├── godoban_main_screen.gd/.tscn    # Root Control; builds the toolbar + tabs + overlays
 ├── data/
 │   ├── godoban_model.gd            # Pure Board / Task / Epic classes + (de)serialization
-│   └── godoban_store.gd            # Persistence layer; the single source of truth
+│   └── godoban_store.gd            # Persistence layer (per-board files + registry); the single source of truth
 ├── ui/
 │   ├── board.gd                   # The board; "all" vs "epic", vertical/horizontal
 │   ├── column.gd                  # One status column; drop target with insertion index
@@ -237,6 +268,7 @@ addons/godoban/
 │   ├── task_editor.gd             # Slide-in create/edit sidebar
 │   ├── calendar_popup.gd          # Hand-rolled month-grid date picker
 │   ├── epic_dialog.gd             # Manage epics (title + color)
+│   ├── board_switcher.gd          # Toolbar chip popup: switch / create / import boards
 │   ├── filters_bar.gd             # Search + sort + priority/epic/label/date filters
 │   ├── overview.gd                # Full-page analytics dashboard
 │   ├── overview_widgets.gd        # Self-drawn ring/donut/bar widgets
