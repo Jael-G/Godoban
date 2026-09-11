@@ -48,7 +48,13 @@ dependency, so nothing ships in your exported game.
 
 **Board & tasks**
 - **Five status columns** — Backlog, To Do, In Progress, Review, Done.
-- **Drag & drop** — move cards between columns to change status, or reorder within a column.
+- **Drag & drop** — move cards between columns to change status, or place one exactly where you
+  release it: the gap between two cards takes it between them (release between the 3rd and 4th and
+  it becomes the 4th), below the last card it becomes last, and an empty column accepts it too.
+  A thin line marks the target slot while you drag, drawn in the dragged card's priority color.
+  Order sticks per column, across restarts.
+- **No sort by default** — columns keep your arrangement until you choose a sort, and the manual
+  order is kept underneath the other six, so switching back to **Manual** restores it untouched.
 - **Priorities** — Low, Medium, High, Critical, color-coded on every card.
 - **Tags / labels** — free-form, with a searchable picker; filter by any label.
 - **Due dates** — set a date via a built-in calendar popup (Godot has no native date picker).
@@ -63,7 +69,10 @@ dependency, so nothing ships in your exported game.
 
 **Search & filters**
 - Live, case-insensitive search across title, description, and tags.
-- 6 sort modes (created, latest edited, priority, due date, alphabetical).
+- 7 sort modes — **Manual** (the default: no sort, so your dragged arrangement stands), plus
+  created, latest edited, priority, due date, and alphabetical. Every other sort views your manual
+  order through a lens rather than replacing it, so the arrangement is still there when you switch
+  back.
 - Filter by priority, epic, or label; date bounds (overdue, due today, due this week, none).
 - All filters combine; empty results show a friendly hint.
 
@@ -90,6 +99,8 @@ Boards live under **`res://godoban_boards/`**:
 - **Imported** boards stay wherever you pick and are referenced by path — they're *not* moved into
   the folder.
 - Saved on every change (debounced ~0.5s), plus on editor save/exit.
+- Each board's `tasks` array is stored **in your manual column order**, so placing a card shows up
+  as an ordinary diff — hand-edit the array and the board follows.
 - Pretty-printed and git-diffable — safe to hand-edit or move between machines.
 - **Removing a board from the list only unregisters it — Godoban never deletes the file.**
   To permanently delete a board, delete its JSON file yourself; the board then stops showing

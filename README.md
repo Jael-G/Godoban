@@ -47,7 +47,7 @@
     <td width="50%" align="center">
       <img src="addons/godoban/screenshots/board.png" alt="Board View" width="480">
       <br><strong>The Board</strong>
-      <br><sub>Five columns with drag-and-drop, priorities, epics, and due dates</sub>
+      <br><sub>Five columns with drag-and-drop ordering, priorities, epics, and due dates</sub>
     </td>
     <td width="50%" align="center">
       <img src="addons/godoban/screenshots/per-epic.png" alt="Per-Epic Mode" width="480">
@@ -111,7 +111,8 @@ Take full control of the project's task list from a familiar, intuitive board.
 | Feature | Description |
 |---|---|
 | **Main Editor Tab** | Appears alongside 2D / 3D / Script as a first-class editor screen. |
-| **Drag & Drop** | Drag cards between columns to change status, and reorder within a column. |
+| **Drag & Drop** | Drag cards between columns to change status, or place one exactly where you release it — the order sticks per column, across restarts. |
+| **Manual Order** | Columns are unsorted by default, so the arrangement you drag out is the arrangement you see, saved as you go. |
 | **5 Status Columns** | Backlog, To Do, In Progress, Review, and Done — a fixed canonical set. |
 | **Priorities** | Low, Medium, High, and Critical, color-coded on every card. |
 | **Tags / Labels** | Free-form tags with a searchable picker; filter by any label. |
@@ -119,6 +120,27 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Descriptions** | Multi-line notes on every task. |
 | **Click to Edit** | Click any card to open it in the slide-in editor; columns have their own "+". |
 | **Collapsible Columns** | Fold a column to a narrow pill to reclaim space; state survives rebuilds. |
+
+**Where a dropped card lands**
+
+| Where you release | Result |
+|---|---|
+| In the gap between two cards | It lands exactly between them — release between the 3rd and 4th and it becomes the 4th. |
+| A card's upper half | It lands **above** that card. |
+| A card's lower half | It lands **below** that card. |
+| Below the last card | It becomes the last card in the column. |
+| An empty column | It becomes that column's only card. |
+
+- A thin line shows the slot the card will land in while you drag, drawn in the dragged card's
+  priority color — the same color as the border on the card under your cursor.
+- Order is written to the board's own JSON, so it survives editor restarts, board switches, and the
+  per-epic views alike.
+- **Manual** sits first in the sort dropdown and is the default. The other six sorts are untouched:
+  your manual arrangement is kept underneath them, so switching back to Manual restores exactly
+  what you dragged out. A drop made while a sort is active is still recorded — the view simply
+  stays sorted until you return to Manual.
+- Placing a card is an arrangement change, not an edit: it leaves *Latest edited* alone, so tidying
+  a column does not reshuffle that sort. Changing a card's **status** still counts as an edit.
 
 </details>
 
@@ -150,7 +172,7 @@ Find exactly what you're looking for, fast.
 | Feature | Description |
 |---|---|
 | **Live Search** | Case-insensitive match against title, description, and tags. |
-| **6 Sort Modes** | Created (oldest/newest), latest edited, priority, due date, alphabetical. |
+| **7 Sort Modes** | **Manual** (the default — no sort, so your dragged arrangement stands), plus created (oldest/newest), latest edited, priority, due date, and alphabetical. Any other sort is a view on top of your manual order, never a replacement for it. |
 | **Filter by Priority** | Narrow to Low / Medium / High / Critical. |
 | **Filter by Epic** | Isolate a single epic. |
 | **Filter by Label** | Pick any tag; the picker even has its own search box. |
@@ -231,6 +253,7 @@ Godoban is a self-contained editor plugin. You can drop it straight into any God
 - **Imported** boards stay wherever you picked them and are referenced by path — they're *not* moved into the folder.
 - Saved on every change (debounced ~0.5s), plus on editor save/exit, and before any board switch so no edits are lost.
 - **Removing a board from the list only unregisters it — Godoban never deletes the underlying file.** To permanently delete a board, remove its file yourself; the board then just stops showing on the list.
+- A board's tasks are stored in its `tasks` array **in your manual column order**, so dragging a card shows up as an ordinary git-diffable change — hand-edit the array and the board follows.
 - The JSON is **git-diffable** and easy to hand-edit or move between machines.
 - A board file with no `"name"` field is imported as **"My Board"**; rename it anytime with the pencil on its row in the switcher.
 
@@ -259,11 +282,11 @@ addons/godoban/
 ├── godoban_plugin.gd               # @tool EditorPlugin — wires the main-screen tab
 ├── godoban_main_screen.gd/.tscn    # Root Control; builds the toolbar + tabs + overlays
 ├── data/
-│   ├── godoban_model.gd            # Pure Board / Task / Epic classes + (de)serialization
+│   ├── godoban_model.gd            # Pure Board / Task / Epic classes + (de)serialization; task array order == manual order
 │   └── godoban_store.gd            # Persistence layer (per-board files + registry); the single source of truth
 ├── ui/
 │   ├── board.gd                   # The board; "all" vs "epic", vertical/horizontal
-│   ├── column.gd                  # One status column; drop target with insertion index
+│   ├── column.gd                  # One status column; drop target, draws the insertion line
 │   ├── card.gd                    # One task card; drag source, click-to-edit
 │   ├── task_editor.gd             # Slide-in create/edit sidebar
 │   ├── calendar_popup.gd          # Hand-rolled month-grid date picker

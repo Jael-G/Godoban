@@ -51,6 +51,15 @@ var _center: CenterContainer
 var _count_label: Label
 var _content: VBoxContainer
 var _header: HBoxContainer
+## The card the current drag would be inserted *before* (null = end of the column).
+var _drop_hint: Card
+## True while a card is being dragged over this column, so the insertion line is drawn.
+var _drop_hint_active := false
+## Colour of the insertion line: the dragged task's priority, so the line matches the
+## coloured border of the card riding under the cursor.
+var _drop_hint_color := T.ACCENT()
+## Full-rect overlay that paints the insertion line (see `_draw_drop_hint`).
+var _drop_overlay: Control
 
 func setup(p_store: RefCounted, p_status: String) -> void:
 	store = p_store
@@ -64,6 +73,12 @@ func setup(p_store: RefCounted, p_status: String) -> void:
 ## isn't always enough to catch it. Re-check each frame and stretch back (cheap:
 ## one `absf` width check + a stale-content check; no-op when the width matches).
 func _process(_delta: float) -> void:
+	# The hint is refreshed on hover, but the engine only calls that hook while the mouse
+	# actually MOVES — so expiring on "no refresh this frame" made the line blink off
+	# whenever the cursor held still. Drive it from where the cursor *is* instead: keep the
+	# line while the cursor is inside this column, drop it once the cursor leaves.
+	if _drop_hint_active and not get_global_rect().has_point(get_global_mouse_position()):
+		_clear_drop_hint()
 	if not collapsed and orientation == "vertical" and not _sizing:
 		_stretch_card_area()
 func _build() -> void:
@@ -78,6 +93,9 @@ func _build() -> void:
 
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
+	# PASS so a drop over the column's own padding still reaches the column: STOP would
+	# break the engine's drop walk here (see the DropArea note below).
+	v.mouse_filter = Control.MOUSE_FILTER_PASS
 	_content = v
 	add_child(v)
 
@@ -145,6 +163,21 @@ func _build() -> void:
 	_cards_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_cards_wrap)
 
+	# Invisible hit-area over the card region, added FIRST so it sits *under* the cards in
+	# both draw and hit order. The engine's drop resolution breaks at the first
+	# MOUSE_FILTER_STOP control that does not accept the drop, and the cards box below is
+	# one of those — so without this overlay a drop in the gap between two cards, below
+	# the last card, or into an empty column dead-ends on the container and never reaches
+	# the column. Points over a card still resolve to the card (children are hit-tested
+	# first), so this only ever sees the gaps.
+	var drop_area := DropArea.new()
+	drop_area.column = self
+	# STOP: this overlay is the hit-test target for the gaps, so it must accept the drop
+	# rather than fall through. Scroll events are propagated through STOP by the engine,
+	# so the column still scrolls with the wheel over the gaps.
+	drop_area.mouse_filter = Control.MOUSE_FILTER_STOP
+	_cards_wrap.add_child(drop_area)
+
 	_cards_container = VBoxContainer.new()
 	if orientation == "horizontal":
 		_cards_container = HBoxContainer.new()
@@ -154,6 +187,10 @@ func _build() -> void:
 		_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_cards_container.add_theme_constant_override("separation", 10)
 		_cards_wrap.add_theme_constant_override("margin_right", 10)
+	# IGNORE: this box has no input behaviour of its own, and children are hit-tested
+	# before their parent, so the cards still win over their own rects while points that
+	# miss every card fall through to the DropArea underneath.
+	_cards_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cards_wrap.add_child(_cards_container)
 
 	var empty_hint := Label.new()
@@ -166,8 +203,19 @@ func _build() -> void:
 	_center = CenterContainer.new()
 	_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# IGNORE so that with the scroll hidden (an empty column) a drop resolves through to
+	# the column itself instead of dead-ending here — the DropArea lives inside the
+	# hidden scroll and is not hit-tested in that state.
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_center.add_child(empty_hint)
 	v.add_child(_center)
+
+	# Insertion indicator. Added last so it paints above the cards, and IGNORE so it never
+	# intercepts the drop itself. The PanelContainer fits it to the column's content rect.
+	_drop_overlay = Control.new()
+	_drop_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_drop_overlay.draw.connect(_draw_drop_hint)
+	add_child(_drop_overlay)
 
 
 ## A small colored dot marking the column's status, sized to hug the header.
@@ -451,6 +499,10 @@ func _horiz_cards_height() -> float:
 ## short for wrapped titles. Re-measure once laid out (and on resize) so each
 ## column reserves room for the real rendered cards.
 func _notification(what: int) -> void:
+	# Clear the insertion line whenever a drag ends, wherever it ended.
+	if what == NOTIFICATION_DRAG_END:
+		_clear_drop_hint()
+		return
 	if collapsed:
 		return
 	if what == NOTIFICATION_RESIZED and (fit or orientation == "horizontal") and not _sizing:
@@ -512,23 +564,150 @@ func _recompute_fit() -> void:
 	_sizing = false
 
 
-func _can_drop_data(_at: Vector2, data) -> bool:
+func _can_drop_data(at: Vector2, data) -> bool:
+	var ok := can_accept_drop(data)
+	if ok:
+		update_drop_hint(data, get_global_transform() * at)
+	return ok
+
+
+func _drop_data(_at: Vector2, data) -> void:
+	apply_drop(data, get_global_mouse_position())
+
+
+## Whether this column takes the given drag payload. Shared by the column's own drop
+## hook and the DropArea overlay so the two can never disagree.
+func can_accept_drop(data) -> bool:
 	if collapsed:
 		return false
 	return data is Dictionary and data.get("type") == "godoban_task"
 
 
-func _drop_data(_at: Vector2, data) -> void:
-	if collapsed:
-		return
-	apply_drop(data)
+## The card a drop at `drop_pos` should be inserted *before*, or null to append. Walks the
+## live cards in flow order, skips the card being dragged (it is still in the list
+## mid-drag, and must never be its own anchor), and returns the first card whose centre
+## along the flow axis lies past the drop point. A card's lower half and the next card's
+## upper half therefore both mean "insert before the next card" — which is what makes
+## releasing in the gap between cards 3 and 4 land the dragged card in slot 4.
+##
+## Cards are compared by GLOBAL rect centre against the global drop point: a
+## ScrollContainer moves its child's rect rather than applying a canvas transform, so
+## global rects already fold in every scroll offset between the card and the screen — the
+## column's inner scroll and the board's outer one — and no conversion is needed.
+func _anchor_before(dragged_id: String, drop_pos: Vector2) -> Card:
+	var vertical := orientation != "horizontal"
+	for c in _cards_container.get_children():
+		var card := c as Card
+		if card == null or card.task == null or card.task.id == dragged_id:
+			continue
+		var centre := card.get_global_rect().get_center()
+		if (centre.y > drop_pos.y) if vertical else (centre.x > drop_pos.x):
+			return card
+	return null
 
 
-## Shared move logic: the Godot `_drop_data` hook delegates here, and a child card
-## that is hit-tested as the drop target calls the same path, so a drop on a card
-## moves the task to this column's status just like a drop on the column's gap.
-func apply_drop(data) -> void:
+## Shared move logic: the Godot `_drop_data` hook delegates here, and a child card that is
+## hit-tested as the drop target calls the same path, so a drop on a card moves the task to
+## this column's status just like a drop on the column's gap. `drop_pos` is in global
+## (canvas) space, matching the cards' global rects — see `_anchor_before`.
+func apply_drop(data, drop_pos: Vector2) -> void:
 	var task = store.board.get_task(data["task_id"])
 	if task == null:
 		return
-	store.move_task(task.id, status)
+	var anchor := _anchor_before(task.id, drop_pos)
+	var before_id: String = anchor.task.id if anchor != null else ""
+	# Hide the line FIRST, then hand the move to the store *deferred*. `move_task` emits
+	# `changed`, the board rebuilds synchronously, and `_rebuild` frees every column —
+	# including this one, while this very method (or the card's) is still on the stack.
+	# Touching `self` after that is a use-after-free, and freeing the drop target inside
+	# its own drag callback is what takes the engine down. Deferring lets the drop handler
+	# unwind cleanly before anything is freed.
+	_clear_drop_hint()
+	store.move_task.call_deferred(task.id, status, before_id)
+
+
+## Recompute the insertion line for a drag hovering this column, and repaint it. The line
+## takes the dragged task's priority colour — the same colour as the border on the card
+## following the cursor — so the line reads as "this card goes here". Falls back to the
+## accent colour when the payload names a task this board does not have.
+func update_drop_hint(data, drop_pos: Vector2) -> void:
+	var dragged := ""
+	if data is Dictionary:
+		dragged = str(data.get("task_id", ""))
+	var task = store.board.get_task(dragged) if dragged != "" else null
+	_drop_hint_color = T.priority_color(task.priority) if task != null else T.ACCENT()
+	_drop_hint = _anchor_before(dragged, drop_pos)
+	_drop_hint_active = true
+	if _drop_overlay != null:
+		_drop_overlay.queue_redraw()
+
+
+func _clear_drop_hint() -> void:
+	if not _drop_hint_active:
+		return
+	_drop_hint_active = false
+	_drop_hint = null
+	if _drop_overlay != null:
+		_drop_overlay.queue_redraw()
+
+
+## The last Card in the cards box, or null. The box also holds a trailing drop-zone pad,
+## so `get_child(-1)` would not do.
+func _last_card() -> Card:
+	var cards := _cards_container.get_children()
+	for i in range(cards.size() - 1, -1, -1):
+		var card := cards[i] as Card
+		if card != null:
+			return card
+	return null
+
+
+## Paint the insertion line in the gap the drop would land in. Drawn on the overlay rather
+## than the column so it sits above the cards, and positioned from the neighbouring cards'
+## GLOBAL rects so it follows the scrolling content.
+func _draw_drop_hint() -> void:
+	if not _drop_hint_active or _cards_container == null or _drop_overlay == null:
+		return
+	var vertical := orientation != "horizontal"
+	var box := _cards_container.get_global_rect()
+	var origin := _drop_overlay.get_global_position()
+	var at := 0.0
+	if _drop_hint != null:
+		# The top edge of the card it will be inserted before.
+		var r := _drop_hint.get_global_rect()
+		at = r.position.y if vertical else r.position.x
+	else:
+		# Appending: just past the last card. An empty column has no gap to point at.
+		var last := _last_card()
+		if last == null:
+			return
+		var e := last.get_global_rect().end
+		at = e.y if vertical else e.x
+	# Sit the line in the middle of the gap, so a card's lower half and the next card's
+	# upper half clearly resolve to the same slot.
+	var mid := at - _cards_container.get_theme_constant("separation") * 0.5
+	var a: Vector2
+	var b: Vector2
+	if vertical:
+		a = Vector2(box.position.x, mid) - origin
+		b = Vector2(box.end.x, mid) - origin
+	else:
+		a = Vector2(mid, box.position.y) - origin
+		b = Vector2(mid, box.end.y) - origin
+	_drop_overlay.draw_line(a, b, _drop_hint_color, 2.0)
+
+
+## Invisible hit-area laid over the card region (see `_build`). It exists because the
+## engine's drop resolution breaks at the first MOUSE_FILTER_STOP control that does not
+## accept the drop, and the cards box is one of those: without this, a drop in the gap
+## between two cards, below the last card, or into an empty column never reaches the
+## column. An inner class keeps it to one file — no extra .gd to import.
+class DropArea extends Control:
+	var column = null  # untyped: the column is this file's outer script
+
+	func _can_drop_data(_at: Vector2, data) -> bool:
+		return column != null and column.can_accept_drop(data)
+
+	func _drop_data(_at: Vector2, data) -> void:
+		if column != null:
+			column.apply_drop(data, get_global_mouse_position())

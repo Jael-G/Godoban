@@ -147,6 +147,33 @@ class Board:
 	func remove_task(t: Task) -> void:
 		tasks.erase(t)
 
+	## Move `t` to sit immediately before the task with `before_id` in the board's task
+	## array. That array IS the manual order, and a column's order is just the array
+	## filtered by status (see `tasks_in_status`), so one array carries the order of all
+	## five columns — and of every per-epic sub-board — at once: removing and re-inserting
+	## a single element never changes the relative order of any other pair.
+	##
+	## The element is removed FIRST and the anchor looked up in the already-shortened
+	## array, so no index adjustment is ever needed. `before_id` may be "" (move to the
+	## end) or stale (also the end — a drop must always land somewhere). Returns true if
+	## the array actually changed.
+	func reorder_before(t: Task, before_id: String) -> bool:
+		var from := tasks.find(t)
+		if from == -1 or before_id == t.id:
+			# Not ours, or "before itself": a no-op, NOT a jump to the end. Without this
+			# guard the anchor has just been erased below, the lookup misses, and the
+			# task silently lands last.
+			return false
+		tasks.remove_at(from)
+		var to := tasks.size()
+		if before_id != "":
+			for i in tasks.size():
+				if tasks[i].id == before_id:
+					to = i
+					break
+		tasks.insert(to, t)
+		return to != from
+
 	func add_epic(e: Epic) -> void:
 		epics.append(e)
 

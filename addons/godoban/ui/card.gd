@@ -231,16 +231,22 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _can_drop_data(_at: Vector2, data) -> bool:
-	# A card is MOUSE_FILTER_STOP, so with the cursor over it the engine resolves
-	# the drop against the card, not its column. Accept so the drop registers, then
-	# forward to the column in `_drop_data` — this is what lets a card be dropped
-	# onto a card instead of only on the gaps between them.
-	return _column != null and data is Dictionary and data.get("type") == "godoban_task"
+	# A card is MOUSE_FILTER_STOP, so with the cursor over it the engine resolves the drop
+	# against the card, not its column. Accept so the drop registers, and forward both the
+	# drop and every hover to the column — the card is the drop target for the whole area
+	# it covers, so without forwarding the position the insertion line would never appear
+	# over a card and a release there would land in the wrong slot.
+	if _column == null or not _column.can_accept_drop(data):
+		return false
+	_column.update_drop_hint(data, get_global_mouse_position())
+	return true
 
 
 func _drop_data(_at: Vector2, data) -> void:
 	if _column != null:
-		_column.apply_drop(data)
+		# `get_global_mouse_position()` is exactly the point the engine used — its drop
+		# point is derived from the mouse — so no coordinate conversion is needed.
+		_column.apply_drop(data, get_global_mouse_position())
 
 
 func _get_drag_data(_at: Vector2) -> Variant:

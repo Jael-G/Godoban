@@ -366,10 +366,14 @@ func _gen_id(name: String) -> String:
 func upsert_task(id: String, title: String, description: String, status: String,
 		priority: String, epic_id: String, due_date: int, tags: Array) -> Model.Task:
 	var t := board.get_task(id)
-	if t == null:
+	var is_new := t == null
+	var prev_status := ""
+	if is_new:
 		t = Model.Task.new(id)
 		t.created_at = _now()
 		board.add_task(t)
+	else:
+		prev_status = t.status
 	t.title = title
 	t.description = description
 	t.status = status
@@ -378,6 +382,12 @@ func upsert_task(id: String, title: String, description: String, status: String,
 	t.due_date = due_date
 	t.tags = tags.duplicate()
 	t.updated_at = _now()
+	# A status change made here (the task editor) would otherwise leave the task at its
+	# old array index, i.e. at an arbitrary spot in the new column. Send it to the end,
+	# the same place a drag into empty space lands. Guarded on a real change: otherwise
+	# every edit (title, tags, …) would shove the task to the bottom of its column.
+	if not is_new and t.status != prev_status:
+		board.reorder_before(t, "")
 	changed.emit()
 	mark_dirty()
 	return t
@@ -392,12 +402,24 @@ func delete_task(id: String) -> void:
 	mark_dirty()
 
 
-func move_task(id: String, new_status: String) -> void:
+## Move `id` to `new_status`, landing immediately before `before_id` inside that column
+## ("" = the end of the column). The board's task array *is* the manual order, so a
+## reorder is an ordinary data change: it emits `changed` and saves.
+##
+## `updated_at` is bumped only when the status really changes: a drag within a column is
+## an arrangement change, not an edit, and bumping it would make the reordered task jump
+## to the top of the "Latest edited" sort.
+func move_task(id: String, new_status: String, before_id := "") -> void:
 	var t := board.get_task(id)
 	if t == null:
 		return
+	var status_changed := t.status != new_status
 	t.status = new_status
-	t.updated_at = _now()
+	if status_changed:
+		t.updated_at = _now()
+	var moved := board.reorder_before(t, before_id)
+	if not status_changed and not moved:
+		return  # dropped exactly where it already was: nothing to redraw or save
 	changed.emit()
 	mark_dirty()
 

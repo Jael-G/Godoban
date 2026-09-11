@@ -243,11 +243,15 @@ func _filtered(tasks: Array) -> Array:
 	return _sorted(out)
 
 
-## Reorder a column's tasks by the current sort mode. Default ("created_asc")
-## sorts by creation date, oldest first.
+## Reorder a column's tasks by the current sort mode. "manual" (the default) applies NO
+## sort: the column keeps the board's own order, which is the order the user set by
+## dragging cards. This must also be the fallback for a *missing* key — the board is
+## built before the filters bar first emits, so `filters` is `{}` on the first paint.
 func _sorted(tasks: Array) -> Array:
 	var out := tasks.duplicate()
-	match str(filters.get("sort", "created_asc")):
+	match str(filters.get("sort", "manual")):
+		"manual":
+			pass  # keep Board.tasks order
 		"created_asc":
 			out.sort_custom(func(a, b): return a.created_at < b.created_at)
 		"created_desc":
@@ -267,6 +271,8 @@ func _sorted(tasks: Array) -> Array:
 				return ka < kb)
 		"alpha":
 			out.sort_custom(func(a, b): return a.title.naturalnocasecmp_to(b.title) < 0)
+		_:
+			pass  # unknown mode: fall back to manual
 	return out
 
 

@@ -9,7 +9,11 @@ extends HFlowContainer
 const Model = preload("res://addons/godoban/data/godoban_model.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 
+## Sort modes, first entry = default (the OptionButton selects index 0). "Manual"
+## applies no sort at all: a column keeps the board's own order, which is the order the
+## user set by dragging cards.
 const SORTS := [
+	["Manual", "manual"],
 	["Created (oldest)", "created_asc"],
 	["Created (newest)", "created_desc"],
 	["Latest edited", "updated"],
