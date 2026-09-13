@@ -195,6 +195,10 @@ static func flat_button(b) -> void:
 	b.add_theme_stylebox_override("hover", pill(_overlay(0.06)))
 	b.add_theme_stylebox_override("pressed", pill(_overlay(0.10)))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	# Every caller is a real button, but a flat one has no border to advertise it and its hover
+	# fill is faint — the pointing hand is what says "this is clickable" for the ✕ in a popup
+	# header, the calendar's arrows, and the picker's Create row.
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
 
 ## A white chevron used by the collapse/expand toggles. `down` true draws "⌄"

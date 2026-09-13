@@ -115,7 +115,7 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Manual Order** | Columns are unsorted by default, so the arrangement you drag out is the arrangement you see, saved as you go. |
 | **5 Status Columns** | Backlog, To Do, In Progress, Review, and Done — a fixed canonical set. |
 | **Priorities** | Low, Medium, High, and Critical, color-coded on every card. |
-| **Tags / Labels** | Free-form tags with a searchable picker; filter by any label. |
+| **Tags / Labels** | Free-form tags with a searchable picker; filter by any label. The **Tags** button opens **Manage Tags** to create, rename (across every task that carried it) and delete them. |
 | **Due Dates** | Set a due date via a hand-rolled calendar popup (Godot has no built-in one). |
 | **Descriptions** | Multi-line notes on every task. |
 | **Click to Edit** | Click any card to open it in a modal popup over the board; columns have their own "+". |
@@ -291,6 +291,8 @@ addons/godoban/
 │   ├── task_editor.gd             # Modal create/edit popup (tag picker, due date, epic)
 │   ├── calendar_popup.gd          # Hand-rolled month-grid date picker
 │   ├── epic_dialog.gd             # Manage epics (title + color)
+│   ├── tags_dialog.gd             # Manage tags: create / rename / delete the board's vocabulary
+│   ├── modal_overlay.gd           # Shared modal chrome + list-row parts every popup builds on
 │   ├── board_switcher.gd          # Toolbar chip popup: switch / create / import boards
 │   ├── filters_bar.gd             # Search + sort + priority/epic/label/date filters
 │   ├── overview.gd                # Full-page analytics dashboard

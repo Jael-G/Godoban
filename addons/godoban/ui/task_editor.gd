@@ -36,7 +36,12 @@ var store: RefCounted
 var editing_id := ""  # "" == new task
 var _default_status := "backlog"
 var _due_ts := 0
+## The staged tag selection (tag names — a task carries names, see `Board.tags`).
 var _tags: Array = []
+## Tags this editing session *created*, i.e. that exist in the board's vocabulary only because
+## this popup asked for them. Kept so an abandoned edit can drop them again — see
+## `_discard_created_tags`. Cleared once the edit is saved, which is when they earn their place.
+var _created_tags: Array = []
 
 var _panel: PanelContainer
 ## True while a fit is already queued for the end of this frame; see `_fit_to_view`.
@@ -480,6 +485,7 @@ func open_new(status: String) -> void:
 	_default_status = status
 	_due_ts = 0
 	_tags = []
+	_created_tags = []
 	_title.text = ""
 	_desc.text = ""
 	_refresh_epics()
@@ -503,6 +509,7 @@ func open_edit(task_id: String) -> void:
 	_default_status = task.status
 	_due_ts = task.due_date
 	_tags = task.tags.duplicate()
+	_created_tags = []
 	_title.text = task.title
 	_desc.text = task.description
 	_refresh_epics()
@@ -703,7 +710,14 @@ func _commit_tag_query() -> void:
 			if not _tags.has(existing):
 				_tags.append(existing)
 		else:
-			_tags.append(p)
+			# A name the board has never used has to exist in its vocabulary before a task can
+			# carry it. `create_tag` returns the spelling in use, so a case variant of a tag made
+			# between the match above and here can't slip in as a second tag.
+			var created: String = store.create_tag(p)
+			if created != "" and not _tags.has(created):
+				_tags.append(created)
+				if not _created_tags.has(created):
+					_created_tags.append(created)
 	_tag_search.set_block_signals(true)
 	_tag_search.clear()
 	_tag_search.set_block_signals(false)
@@ -805,6 +819,9 @@ func _save() -> void:
 		epic_id = str(_epic_btn.get_item_metadata(_epic_btn.selected))
 	var id: String = editing_id if editing_id != "" else store.board.new_id("task")
 	store.upsert_task(id, title, _desc.text, status, priority, epic_id, _due_ts, _tags)
+	# Committed: the tags this session created are now on a saved task, so they're the board's to
+	# keep and must not be swept up by a later cancel.
+	_created_tags = []
 	hide()
 	closed.emit()
 
@@ -818,6 +835,9 @@ func _delete() -> void:
 func _do_delete() -> void:
 	_confirm.hide()
 	store.delete_task(editing_id)
+	# The task that carried them is gone, so anything this session created for it is now unused —
+	# the same leftover a cancel would leave behind.
+	_discard_created_tags()
 	hide()
 	closed.emit()
 
@@ -833,5 +853,18 @@ func _style_danger(b: Button) -> void:
 
 
 func _cancel() -> void:
+	_discard_created_tags()
 	hide()
 	closed.emit()
+
+
+## Drop the tags this editing session created and nothing ended up using. The popup's contract is
+## that nothing reaches the store until Save; a *new tag* is the one thing that has to reach it
+## earlier, because it must exist in the board's vocabulary before a task can point at it. This
+## hands back what the abandoned edit was holding: only names no other task picked up in the
+## meantime, so a tag that was genuinely wanted survives.
+func _discard_created_tags() -> void:
+	for name in _created_tags:
+		if store.tag_usage(String(name)) == 0:
+			store.delete_tag(String(name))
+	_created_tags = []

@@ -363,18 +363,142 @@ func _gen_id(name: String) -> String:
 
 # --- task operations ---------------------------------------------------------
 
-## Every distinct tag in use on the current board, sorted. Shared by the task editor's tag
+## Every tag on the board, sorted case-insensitively by name. Shared by the task editor's tag
 ## picker and the board's label filter.
+##
+## This is the board's *vocabulary* (`Board.tags`), not a scan of the tasks: it includes tags
+## nothing carries yet — that is the whole point of the vocabulary — and includes a name only a
+## task carries, because the board was loaded through `_merge_tag_names`. Always a fresh array:
+## callers sort and filter what they get, and handing out the board's own array would let a
+## display choice silently reorder the vocabulary that gets saved.
 func all_tags() -> Array:
-	var seen := {}
+	var out: Array = board.tags.duplicate()
+	out.sort_custom(func(a, b): return String(a).naturalnocasecmp_to(String(b)) < 0)
+	return out
+
+
+# --- tag operations ----------------------------------------------------------
+
+## How many tasks carry `name`. Case-insensitive (see `Model.tag_key`), so a board edited by hand
+## into holding both "AI" and "ai" counts as one tag, the same way every other tag rule sees it.
+func tag_usage(name: String) -> int:
+	var key := Model.tag_key(name)
+	var n := 0
 	for t in board.tasks:
 		for tag in t.tags:
-			seen[tag] = true
-	var out: Array = []
-	for k in seen:
-		out.append(k)
-	out.sort()
-	return out
+			if Model.tag_key(str(tag)) == key:
+				n += 1
+				break
+	return n
+
+
+## The stored spelling of the tag matching `name` case-insensitively, or "" if the board has no
+## such tag. This is what stops a typed name from spawning a near-duplicate of one already in
+## use: "Ai" resolves to the "AI" the board already has, and that spelling is what gets used.
+func find_tag(name: String) -> String:
+	var key := Model.tag_key(name)
+	for tag in board.tags:
+		if Model.tag_key(String(tag)) == key:
+			return String(tag)
+	return ""
+
+
+## Add a name to the board's vocabulary and return the spelling now in use — the existing one
+## when the board already has the tag in any case, otherwise the new name. "" means the name is
+## unusable: blank, or carrying a comma.
+##
+## Commas are refused rather than split. The task editor's field splits a typed batch on commas,
+## so no tag containing one can exist on a task; accepting one here would create a tag the picker
+## can never type back.
+func create_tag(name: String) -> String:
+	var n := Model.clamp_tag(name)
+	if n == "" or n.contains(","):
+		return ""
+	var existing := find_tag(n)
+	if existing != "":
+		return existing  # already known: nothing changed, so nothing to redraw or save
+	board.tags.append(n)
+	changed.emit()
+	mark_dirty()
+	return n
+
+
+## Rename a tag everywhere it appears: the vocabulary entry, and every task carrying it. Returns
+## true if anything changed; false when the old name isn't a tag, the new one is unusable, it is
+## what the tag is already called, or a *different* tag already answers to it.
+##
+## Refusing the collision rather than merging is deliberate: a merge would have to pick which of
+## the two names survives and silently fold one tag into the other, and the user asked to rename
+## a tag, not to combine two. The dialog reports the clash so the name can be corrected.
+##
+## `updated_at` is left alone — renaming a tag is not an edit to the tasks that carry it, and
+## bumping it would march every one of them to the top of the "Latest edited" sort. Deleting is
+## the same; `Board.remove_epic` sets the precedent by clearing `epic_id` without touching stamps.
+func rename_tag(old_name: String, new_name: String) -> bool:
+	var from := find_tag(old_name)
+	if from == "":
+		return false
+	# Compared before clamping: a name already on the board can predate the length cap, and
+	# leaving the field alone must never truncate it just because the cap is shorter.
+	var raw := new_name.strip_edges()
+	if raw == "" or raw == from:
+		return false
+	var to := Model.clamp_tag(raw)
+	if to == "" or to.contains(","):
+		return false
+	# A clash is only a clash if it belongs to *another* tag: renaming "ai" to "AI" resolves to
+	# the very tag being renamed, which is a legal (case-only) rename.
+	var clash := find_tag(to)
+	if clash != "" and clash != from:
+		return false
+	var idx := board.tags.find(from)
+	if idx == -1:
+		return false  # unreachable while the vocabulary is a superset of the tasks; never write -1
+	board.tags[idx] = to
+	_sweep_tag(from, to)
+	changed.emit()
+	mark_dirty()
+	return true
+
+
+## Drop a tag from the board and strip it from every task carrying it. Returns how many tasks it
+## was removed from, so the UI can say what it did (and confirm it first when that isn't zero).
+func delete_tag(name: String) -> int:
+	var from := find_tag(name)
+	if from == "":
+		return 0
+	board.tags.erase(from)
+	var touched := _sweep_tag(from, "")
+	changed.emit()
+	mark_dirty()
+	return touched
+
+
+## Rewrite every occurrence of `from` in the board's tasks to `to`, or drop it entirely when `to`
+## is "". Matching is case-insensitive, so a board holding both spellings of a name is swept in
+## one pass — and a task that ends up with the same name twice (it carried both spellings, or it
+## already had the rename target) keeps a single entry. Returns how many tasks changed.
+func _sweep_tag(from: String, to: String) -> int:
+	var from_key := Model.tag_key(from)
+	var touched := 0
+	for t in board.tasks:
+		var out: Array = []
+		var seen := {}
+		var hit := false  # named for the signal's sake: `changed` is the store's, not a task's
+		for raw in t.tags:
+			var name := str(raw)
+			if Model.tag_key(name) == from_key:
+				hit = true
+				name = to
+			var key := Model.tag_key(name)
+			if key == "" or seen.has(key):
+				continue
+			seen[key] = true
+			out.append(name)
+		if hit:
+			t.tags = out
+			touched += 1
+	return touched
 
 
 func upsert_task(id: String, title: String, description: String, status: String,

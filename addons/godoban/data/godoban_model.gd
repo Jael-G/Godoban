@@ -31,6 +31,18 @@ static func tag_label(tag: String) -> String:
 	return tag.substr(0, MAX_TAG_LEN) + "…"
 
 
+## The comparison key for a tag: trimmed, lowercased. Tags are stored as the user typed them and
+## are only ever *compared* through this, so "AI" and "ai" are one tag for every question that
+## matters — the vocabulary's dedup, a usage count, and the rename/delete sweep — while the
+## stored spelling, which is what gets displayed, is never rewritten by a comparison.
+##
+## Delegates to the same-named static on `Board`, which is where it lives: an inner class can't
+## reach the enclosing script's statics, and the vocabulary merge happens inside `Board`. One
+## implementation, two ways in.
+static func tag_key(tag: String) -> String:
+	return Board.tag_key(tag)
+
+
 static func status_title(status: String) -> String:
 	var i := STATUSES.find(status)
 	return STATUS_TITLES[i] if i != -1 else status
@@ -83,6 +95,9 @@ class Task:
 	var priority: String
 	var epic_id: String  # "" == no epic (serialized as null)
 	var due_date: int  # Unix timestamp, 0 == none (serialized as null)
+	## Tag NAMES, as the user typed them. The board's `tags` array is the vocabulary these are
+	## drawn from (and the reason a tag can exist with no task on it); matching is always
+	## case-insensitive, through `tag_key`.
 	var tags: Array
 	var created_at: int
 	var updated_at: int
@@ -136,12 +151,25 @@ class Board:
 	var name := ""
 	var next_id := 1
 	var epics: Array = []
+	## The board's tag vocabulary: tag NAMES (the same strings `Task.tags` carries). It exists
+	## independently of the tasks so a tag can be created before anything uses it — a tag has no
+	## other identity to hang off, so "a tag that isn't on a task" is only representable here.
+	## Tasks stay the source of what's *used*; this is the source of what *exists*. The store's
+	## tag mutators keep the two in step, and any name that only a task carries is folded in on
+	## load, so this is always a superset of what the tasks use.
+	var tags: Array = []
 	var tasks: Array = []
 
 	func new_id(prefix: String) -> String:
 		var result := "%s_%d" % [prefix, next_id]
 		next_id += 1
 		return result
+
+	## The comparison key for a tag: trimmed, lowercased — see the identical static on the
+	## enclosing script, which delegates here. It lives on `Board` because the vocabulary merge
+	## below needs it and an inner class can't see the outer script's statics.
+	static func tag_key(tag: String) -> String:
+		return tag.strip_edges().to_lower()
 
 	func get_task(id: String) -> Task:
 		for t in tasks:
@@ -214,6 +242,7 @@ class Board:
 		return {
 			"name": name,
 			"next_id": next_id,
+			"tags": tags.duplicate(),
 			"epics": epic_arr,
 			"tasks": task_arr,
 		}
@@ -228,4 +257,37 @@ class Board:
 		for t in d.get("tasks", []):
 			if t is Dictionary:
 				b.tasks.append(Task.from_dict(t))
+		# After the tasks, because the vocabulary is read together with what they carry. A board
+		# that predates the vocabulary has no `tags` key at all and simply gets the tags in use.
+		b.tags = _merge_tag_names(d.get("tags", []), b.tasks)
 		return b
+
+
+	## The tag vocabulary as loaded: the board's own `listed` entries first, then any name a task
+	## carries that the list didn't mention (a board written before the vocabulary existed, or one
+	## edited by hand). Names are deduped case-insensitively and the first spelling wins, so the
+	## first-encountered form is the one that gets displayed and saved.
+	##
+	## Deliberately a *union* rather than a straight read: it makes the field additive — old files
+	## load unchanged, no migration step and no version gate is needed, and running it over an
+	## already-migrated board is a no-op.
+	static func _merge_tag_names(listed: Variant, tasks: Array) -> Array:
+		var out: Array = []
+		var seen := {}
+		if listed is Array:
+			for raw in listed:
+				_append_tag_name(out, seen, str(raw))
+		for t in tasks:
+			for raw in t.tags:
+				_append_tag_name(out, seen, str(raw))
+		return out
+
+
+	## Append `name` to a vocabulary being built unless a case variant is already in it. Blank
+	## names are dropped: an empty tag is not a tag.
+	static func _append_tag_name(out: Array, seen: Dictionary, name: String) -> void:
+		var key := Board.tag_key(name)
+		if key == "" or seen.has(key):
+			return
+		seen[key] = true
+		out.append(name.strip_edges())

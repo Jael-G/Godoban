@@ -10,6 +10,7 @@ const GodobanStore = preload("res://addons/godoban/data/godoban_store.gd")
 const Board = preload("res://addons/godoban/ui/board.gd")
 const TaskEditor = preload("res://addons/godoban/ui/task_editor.gd")
 const EpicDialog = preload("res://addons/godoban/ui/epic_dialog.gd")
+const TagsDialog = preload("res://addons/godoban/ui/tags_dialog.gd")
 const FiltersBar = preload("res://addons/godoban/ui/filters_bar.gd")
 const Overview = preload("res://addons/godoban/ui/overview.gd")
 const BoardSwitcher = preload("res://addons/godoban/ui/board_switcher.gd")
@@ -25,6 +26,7 @@ var store: GodobanStore
 var board: Board
 var editor: TaskEditor
 var epic_dialog: EpicDialog
+var tags_dialog: TagsDialog
 var filters_bar: FiltersBar
 var overview: Overview
 var board_switcher: BoardSwitcher
@@ -74,6 +76,10 @@ func _build_overlays() -> void:
 	epic_dialog.changed.connect(func(id): editor.refresh_epics(id))
 	editor.new_epic_requested.connect(func(): epic_dialog.open())
 
+	tags_dialog = TagsDialog.new()
+	tags_dialog.setup(store)
+	add_child(tags_dialog)
+
 	# The import file picker lives here, not inside the popup, so it stays open even
 	# if the popup closes on an outside click mid-selection.
 	_import_dialog = FileDialog.new()
@@ -103,7 +109,7 @@ func _build_overlays() -> void:
 ## the editor theme, so re-applying them repaints every surface.
 func _rebuild_chrome() -> void:
 	for c in get_children():
-		if c == editor or c == epic_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
+		if c == editor or c == epic_dialog or c == tags_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
 			continue
 		remove_child(c)
 		c.free()
@@ -116,6 +122,8 @@ func _rebuild_chrome() -> void:
 		move_child(editor, get_child_count() - 1)
 	if epic_dialog != null:
 		move_child(epic_dialog, get_child_count() - 1)
+	if tags_dialog != null:
+		move_child(tags_dialog, get_child_count() - 1)
 	if board_switcher != null:
 		move_child(board_switcher, get_child_count() - 1)
 	if _message_box != null:
@@ -279,6 +287,15 @@ func _build_toolbar() -> Control:
 	T.button(epics_btn, true)
 	epics_btn.pressed.connect(func(): epic_dialog.open())
 	actions.add_child(epics_btn)
+
+	# Tags sit beside Epics as the other board-wide vocabulary; both open a management popup
+	# rather than creating something here.
+	var tags_btn := Button.new()
+	tags_btn.text = "Tags"
+	tags_btn.tooltip_text = "Manage tags"
+	T.button(tags_btn, true)
+	tags_btn.pressed.connect(_open_tags)
+	actions.add_child(tags_btn)
 
 	# Row 2: view-mode toggles + search + filter dropdowns share one wrapping
 	# flow. Wide editors show a single line; narrow ones wrap onto more lines,
@@ -475,6 +492,13 @@ func _open_board_switcher() -> void:
 	board_switcher.open()
 
 
+## The toolbar is built before the overlays exist, so the guard isn't decorative.
+func _open_tags() -> void:
+	if tags_dialog == null:
+		return
+	tags_dialog.open()
+
+
 ## A board was just switched (or the last one removed): repaint the whole state — chip,
 ## view tabs, and content vs. empty state — and clear any open task editor, so a lingering
 ## "Save" can't write a stale task into the new board.
@@ -482,6 +506,10 @@ func _on_board_switched(_id: String) -> void:
 	_apply_board_state()
 	if editor != null:
 		editor.hide()
+	if tags_dialog != null:
+		# Its rows name the *old* board's tags; the popup is rebuilt on open, so it only has to
+		# come down — leaving it up would offer renames into a board that's no longer on screen.
+		tags_dialog.hide()
 	if filters_bar != null:
 		filters_bar.reset_scope()
 

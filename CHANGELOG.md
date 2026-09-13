@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.4.0] - 2026-09-13
+
+### Added
+
+- **Tags managing improved.** A **Tags** button in the toolbar opens a **Manage Tags** popup listing every tag on the board with the number of tasks
+  using it. From here tags can easily be created, edited (renaming), or deleted.
+
+- **A tag can exist before any task uses it.** The board file gains a top-level `"tags"` array — meaning tags that are never in use can be easily created from the new menu (no longer need to create tags from the task editor.)
+
 ## [1.3.1] - 2026-09-13
 
 ### Changed

@@ -252,3 +252,56 @@ func _cancel() -> void:
 ## True while the subclass is mid-edit and wants ESC for itself (an inline rename field, say).
 func _modal_escape_consumed() -> bool:
 	return false
+
+
+# --- shared list-row parts ----------------------------------------------------
+# The board switcher and the tags dialog both draw rows of "a name, then small icon actions",
+# with an inline rename that swaps the name for a field. Those parts live here rather than in
+# either subclass: the switcher resolves them through `extends`, and a second copy is how the
+# two lists would drift apart.
+
+
+## A small flat icon-only button: no background/border, a hand cursor, and a tooltip. The glyph is
+## tinted separately via `_tint_button_icon`.
+func _icon_button(kind: String, tooltip: String) -> Button:
+	var b := Button.new()
+	b.flat = true
+	b.icon = I.icon(kind, 16)
+	b.tooltip_text = tooltip
+	b.custom_minimum_size = Vector2(16, 16)
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.focus_mode = Control.FOCUS_NONE
+	return b
+
+
+## Tint an icon button's glyph: `base` while idle/focused/pressed, `hover` while the pointer is
+## over it. Lets two icons in the same row read as distinct (pencil, rename, remove).
+func _tint_button_icon(btn: Button, base: Color, hover: Color) -> void:
+	for s in ["icon_normal_color", "icon_focus_color", "icon_pressed_color"]:
+		btn.add_theme_color_override(s, base)
+	btn.add_theme_color_override("icon_hover_color", hover)
+	btn.add_theme_color_override("icon_hover_pressed_color", hover)
+
+
+## Make a row's name label take the width it's given instead of demanding its text's width.
+## `clip_text` is what does it (measured: it drops the label's minimum width to ~1px, so the
+## HBox can always fit the panel and the trailing buttons hold their spot); the overrun
+## behavior only decides how the cut looks — an ellipsis rather than a hard chop.
+## Pair with `SIZE_EXPAND_FILL`, which is what makes the label fill the leftover width.
+func _contain_label(l: Label) -> void:
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.clip_text = true
+
+
+## The tooltip a row should carry: the full name while its label is too narrow to show it,
+## empty while it fits. Measured against the label's own font rather than counted in
+## characters, so it reflects what's actually rendered; before the first layout pass the
+## label has no width yet, so assume trimmed and let the `resized` hook correct it.
+func _name_tooltip(label: Label) -> String:
+	if label.size.x <= 0.0:
+		return label.text
+	var font := label.get_theme_font("font")
+	var font_size := label.get_theme_font_size("font_size")
+	var text_w := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	return label.text if text_w > label.size.x else ""

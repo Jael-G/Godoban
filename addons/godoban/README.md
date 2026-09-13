@@ -56,7 +56,10 @@ dependency, so nothing ships in your exported game.
 - **No sort by default** — columns keep your arrangement until you choose a sort, and the manual
   order is kept underneath the other six, so switching back to **Manual** restores it untouched.
 - **Priorities** — Low, Medium, High, Critical, color-coded on every card.
-- **Tags / labels** — free-form, with a searchable picker; filter by any label.
+- **Tags / labels** — free-form, with a searchable picker; filter by any label. The **Tags** button
+  in the toolbar opens **Manage Tags**, where tags are created, renamed in place, and deleted —
+  renaming one updates every task that carried it, and a deletion says how many tasks it will
+  touch before it happens.
 - **Due dates** — set a date via a built-in calendar popup (Godot has no native date picker).
 - **Descriptions** — multi-line notes on each task.
 - **Click to edit** — any card opens in a modal popup over the board; each column has its own "＋".
