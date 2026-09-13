@@ -1,13 +1,13 @@
 @tool
-extends PopupPanel
+extends "res://addons/godoban/ui/modal_overlay.gd"
 
 ## board_switcher.gd — the "switch board" popup, opened from the board chip in the
 ## tab bar. Lists every known board (click to switch), and offers two actions:
 ## create a brand-new board, or import an existing board JSON from anywhere on disk.
 ## Modeled on the epics dialog: built once, rebuilt from fresh state on each open().
-
-const T = preload("res://addons/godoban/ui/theme.gd")
-const I = preload("res://addons/godoban/ui/icons.gd")
+##
+## Chrome (backdrop, centered bordered panel, header ✕) comes from `modal_overlay.gd`;
+## `T` and `I` are inherited from it.
 
 var store: RefCounted
 var _import_dialog: FileDialog
@@ -17,6 +17,8 @@ var _action_row: HBoxContainer
 var _create_box: VBoxContainer
 var _create_name: LineEdit
 var _usage: Label
+## The row currently swapped into rename mode, if any — ESC belongs to it, not to the modal.
+var _editing_box: Control
 
 
 ## `p_import_dialog` is owned by the main screen (not the popup) so it survives the
@@ -29,31 +31,39 @@ func setup(p_store: RefCounted, p_import_dialog: FileDialog) -> void:
 	# A board whose file is gone gets dropped from the registry by the store; keep the
 	# visible list in sync so the user doesn't click the dead row again.
 	store.board_missing.connect(_on_board_missing)
+	# ~4 rows (~34px each + separation) before the list scrolls; past that the fit clamps it
+	# so the panel never outgrows the editor.
+	list_min_h = 160.0
+	list_max_h = 320.0
 	_build()
 
 
-func _build() -> void:
-	title = "Boards"
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 10, 16, 16, 14, 14, 1))
+func _modal_icon() -> String:
+	return "kanban"
 
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	v.custom_minimum_size = Vector2(280, 0)
-	add_child(v)
 
-	v.add_child(_build_header())
+func _modal_title() -> String:
+	return "Boards"
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# ~4 rows (~34px each + separation) before it scrolls; the panel auto-sizes to the
-	# content minimum, so this minimum is what decides when the viewport starts scrolling.
-	scroll.custom_minimum_size = Vector2(0, 160)
-	v.add_child(scroll)
+
+func _modal_header_extras() -> Control:
+	_usage = Label.new()
+	_usage.add_theme_color_override("font_color", T.TEXT_FAINT())
+	_usage.text = "click to switch"
+	_usage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return _usage
+
+
+func _build_body(v: VBoxContainer) -> void:
+	list = ScrollContainer.new()
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.custom_minimum_size = Vector2(0, list_min_h)
+	v.add_child(list)
 
 	_rows = VBoxContainer.new()
 	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows.add_theme_constant_override("separation", 4)
-	scroll.add_child(_rows)
+	list.add_child(_rows)
 
 	var sep := HSeparator.new()
 	v.add_child(sep)
@@ -68,22 +78,6 @@ func _build() -> void:
 	_create_box.visible = false
 	v.add_child(_create_box)
 	_build_create()
-
-
-func _build_header() -> Control:
-	var h := HBoxContainer.new()
-	var t := Label.new()
-	t.text = "Boards"
-	t.add_theme_font_size_override("font_size", 15)
-	h.add_child(t)
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(spacer)
-	_usage = Label.new()
-	_usage.add_theme_color_override("font_color", T.TEXT_FAINT())
-	_usage.text = "click to switch"
-	h.add_child(_usage)
-	return h
 
 
 func _build_actions() -> void:
@@ -134,14 +128,20 @@ func _build_create() -> void:
 	btns.add_child(create)
 
 
-## Position the popup just below the chip and rebuild the rows from the current
-## registry, so it always reflects the latest boards + current selection.
-func open(anchor: Rect2i) -> void:
+## Center the modal and rebuild the rows from the current registry, so it always reflects the
+## latest boards + current selection.
+func open() -> void:
+	_editing_box = null
 	_create_box.visible = false
 	_action_row.visible = true
 	_rebuild_rows()
-	var pos := anchor.position + Vector2i(0, anchor.size.y)
-	popup(Rect2i(pos.x, pos.y, 280, 0))
+	_show_modal()
+
+
+## A row in rename mode owns ESC: it backs out of the edit rather than dismissing the whole modal.
+## `is_instance_valid` because committing a rename rebuilds (and frees) every row.
+func _modal_escape_consumed() -> bool:
+	return is_instance_valid(_editing_box) and _editing_box.visible
 
 
 func _rebuild_rows() -> void:
@@ -251,6 +251,8 @@ func _build_row(entry: Dictionary) -> Control:
 		label.visible = not on
 		pencil_btn.visible = not on
 		remove_btn.visible = not on
+		# While this row is in edit mode it is what ESC talks to (see `_modal_escape_consumed`).
+		_editing_box = edit_box if on else null
 		if on:
 			name_edit.text = String(entry["name"])
 			name_edit.call_deferred("grab_focus")
@@ -359,6 +361,9 @@ func _begin_create() -> void:
 	_action_row.visible = false
 	_create_box.visible = true
 	_create_name.text = ""
+	# The create box is taller than the action row it replaces, so the list may need to give back
+	# some height to keep the panel inside the editor.
+	_fit_to_view()
 	# Defer so the box is mounted before grabbing focus.
 	call_deferred("_focus_create")
 
@@ -371,6 +376,7 @@ func _focus_create() -> void:
 func _cancel_create() -> void:
 	_create_box.visible = false
 	_action_row.visible = true
+	_fit_to_view()
 
 
 func _create() -> void:

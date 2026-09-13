@@ -13,6 +13,7 @@ const EpicDialog = preload("res://addons/godoban/ui/epic_dialog.gd")
 const FiltersBar = preload("res://addons/godoban/ui/filters_bar.gd")
 const Overview = preload("res://addons/godoban/ui/overview.gd")
 const BoardSwitcher = preload("res://addons/godoban/ui/board_switcher.gd")
+const MessageDialog = preload("res://addons/godoban/ui/message_dialog.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
 
@@ -28,8 +29,10 @@ var filters_bar: FiltersBar
 var overview: Overview
 var board_switcher: BoardSwitcher
 var _import_dialog: FileDialog
-var _message_box: PopupPanel
-var _message_label: Label
+var _message_box: MessageDialog
+## Held between `show_message` and the deferred pop, which exists so the popup isn't opened from
+## inside a `gui_input` handler (see `show_message`).
+var _message_text := ""
 var _epic_toggle: Button
 var _orientation_toggle: Button
 var _board_chip: Control
@@ -52,12 +55,14 @@ func _ready() -> void:
 	_build_overlays()
 
 
-## Builds the task editor + epics dialog once; they persist across chrome rebuilds
-## so an open edit survives a theme change. Added after the chrome so they layer on top.
+## Builds the task editor + dialogs once; they persist across chrome rebuilds so an open edit
+## survives a theme change. Added after the chrome so they layer on top, and in this order —
+## each one added later covers the ones before it: editor < epics < boards < message.
 func _build_overlays() -> void:
 	if editor != null:
 		return
-	# Full-rect overlay; it anchors and centers itself (see `task_editor.gd`).
+	# Full-rect overlays; all of them anchor and center themselves. The dialogs share their chrome
+	# through `modal_overlay.gd`; the editor predates it and carries its own copy of the layout.
 	editor = TaskEditor.new()
 	editor.setup(store)
 	editor.visible = false
@@ -113,6 +118,8 @@ func _rebuild_chrome() -> void:
 		move_child(epic_dialog, get_child_count() - 1)
 	if board_switcher != null:
 		move_child(board_switcher, get_child_count() - 1)
+	if _message_box != null:
+		move_child(_message_box, get_child_count() - 1)
 	if _import_dialog != null:
 		move_child(_import_dialog, get_child_count() - 1)
 
@@ -463,10 +470,9 @@ func _on_chip_input(e: InputEvent) -> void:
 
 
 func _open_board_switcher() -> void:
-	if _board_chip == null or board_switcher == null:
+	if board_switcher == null:
 		return
-	var r := _board_chip.get_global_rect()
-	board_switcher.open(Rect2i(r.position, r.size))
+	board_switcher.open()
 
 
 ## A board was just switched (or the last one removed): repaint the whole state — chip,
@@ -493,35 +499,22 @@ func _on_board_renamed(board_id: String, _board_name: String) -> void:
 ## Show a small centered message popup (currently: a refused duplicate import). Owned
 ## here — not by the board switcher — so it stays up after the switcher hides
 ## itself following the action that triggered the message. Deferred: we may be inside a
-## gui_input signal handler (a board row click), so opening the popup this frame can be
-## swallowed; pop it on the next idle frame instead.
+## gui_input signal handler (a board row click), and the modal that opens this frame would
+## rebuild the row that is still dispatching; show it on the next idle frame instead.
 func show_message(text: String) -> void:
 	if _message_box == null:
 		_build_message_box()
-	_message_label.text = text
+	_message_text = text
 	call_deferred("_popup_message")
 
 
 func _popup_message() -> void:
-	_message_box.popup_centered()
+	_message_box.show_text(_message_text)
 
 
 func _build_message_box() -> void:
-	_message_box = PopupPanel.new()
-	_message_box.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 14, 14, 12, 12, 1))
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
-	_message_box.add_child(v)
-	_message_label = Label.new()
-	_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_message_label.custom_minimum_size = Vector2(280, 0)
-	v.add_child(_message_label)
-	var ok := Button.new()
-	ok.text = "OK"
-	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	T.button(ok)
-	ok.pressed.connect(func(): _message_box.hide())
-	v.add_child(ok)
+	_message_box = MessageDialog.new()
+	_message_box.setup()
 	add_child(_message_box)
 
 

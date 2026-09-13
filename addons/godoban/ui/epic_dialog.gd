@@ -1,14 +1,15 @@
 @tool
-extends PopupPanel
+extends "res://addons/godoban/ui/modal_overlay.gd"
 
 ## Manage epics inline: each epic is a row with a color square (opens Godot's
 ## color picker) next to an editable title field. Edit in place, then Save to
 ## commit everything — new, renamed, recolored and deleted epics — or Cancel to
 ## discard it all. Uncommitted edits never touch the store, so Cancel reliably
 ## undoes them. Deletion is staged too (a removed row reappears on Cancel).
+##
+## Chrome (backdrop, centered bordered panel, header ✕) comes from `modal_overlay.gd`;
+## `T` and `I` are inherited from it.
 
-const T = preload("res://addons/godoban/ui/theme.gd")
-const I = preload("res://addons/godoban/ui/icons.gd")
 const ColorSwatch = preload("res://addons/godoban/ui/color_swatch.gd")
 
 signal changed(epic_id: String)
@@ -26,29 +27,38 @@ var _focus_edit: LineEdit
 
 func setup(p_store: RefCounted) -> void:
 	store = p_store
+	# Four rows before the list starts scrolling — the panel is a side dialog, not a page.
+	list_min_h = 150.0
+	list_max_h = 260.0
 	_build()
 
 
-func _build() -> void:
-	title = "Epics"
-	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 10, 16, 16, 14, 14, 1))
+func _modal_icon() -> String:
+	return "layers-2"
 
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	v.custom_minimum_size = Vector2(400, 0)
-	add_child(v)
 
-	v.add_child(_build_header())
+func _modal_title() -> String:
+	return "Epics"
 
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2(0, 150)
-	v.add_child(scroll)
+
+## The epic count sits just left of the ✕, where the task editor keeps its own header extras.
+func _modal_header_extras() -> Control:
+	_head_count = Label.new()
+	_head_count.add_theme_color_override("font_color", T.TEXT_FAINT())
+	_head_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return _head_count
+
+
+func _build_body(v: VBoxContainer) -> void:
+	list = ScrollContainer.new()
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.custom_minimum_size = Vector2(0, list_min_h)
+	v.add_child(list)
 
 	_rows = VBoxContainer.new()
 	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows.add_theme_constant_override("separation", 4)
-	scroll.add_child(_rows)
+	list.add_child(_rows)
 
 	_add_btn = Button.new()
 	_add_btn.text = "+  New epic"
@@ -63,21 +73,6 @@ func _build() -> void:
 	v.add_child(sep)
 
 	v.add_child(_build_footer())
-
-
-func _build_header() -> Control:
-	var h := HBoxContainer.new()
-	var t := Label.new()
-	t.text = "Epics"
-	t.add_theme_font_size_override("font_size", 15)
-	h.add_child(t)
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(spacer)
-	_head_count = Label.new()
-	_head_count.add_theme_color_override("font_color", T.TEXT_FAINT())
-	h.add_child(_head_count)
-	return h
 
 
 func _build_footer() -> Control:
@@ -110,7 +105,7 @@ func open() -> void:
 		_drafts.append({"id": e.id, "title": e.title, "color": e.color})
 	_focus_index = -1
 	_rebuild_rows()
-	popup_centered()
+	_show_modal()
 
 
 func _rebuild_rows() -> void:
@@ -202,10 +197,6 @@ func _remove_row(d: Dictionary) -> void:
 	# Defer: this runs from the row's delete button, and _rebuild_rows free()s
 	# every row — including the button whose `pressed` signal is still emitting.
 	call_deferred("_rebuild_rows")
-
-
-func _cancel() -> void:
-	hide()
 
 
 func _save() -> void:

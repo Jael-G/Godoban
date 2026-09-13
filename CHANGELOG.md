@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.3.1] - 2026-09-13
+
+### Changed
+
+- **All popups now share one look.** The Epics dialog, the Boards switcher and the message notice
+  wear the task editor's look. 
+
+### Fixed
+
+- Rounded popups no longer show black wedges in their corners.
+
 ## [1.3.0] - 2026-09-12
 
 ### Added

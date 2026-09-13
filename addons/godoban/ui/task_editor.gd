@@ -9,6 +9,7 @@ extends Control
 
 const Model = preload("res://addons/godoban/data/godoban_model.gd")
 const Calendar = preload("res://addons/godoban/ui/calendar_popup.gd")
+const ModalOverlay = preload("res://addons/godoban/ui/modal_overlay.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
 
@@ -783,6 +784,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		# The delete confirmation is a popup of its own and owns ESC while it's up.
 		if _confirm != null and _confirm.visible:
+			return
+		# So does any modal stacked over this one — the epics dialog is opened *from* the editor,
+		# and one press must not dismiss both. See `ModalOverlay.owns_escape`.
+		if not ModalOverlay.owns_escape(self):
 			return
 		_cancel()
 		get_viewport().set_input_as_handled()
