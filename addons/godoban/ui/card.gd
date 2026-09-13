@@ -173,7 +173,10 @@ func _pill(text: String) -> Control:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", _tint_pill(Color(txt, 0.12)))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.add_child(_pill_text(text, txt))
+	# Truncated: pills wrap, so an over-long tag would take a line to itself and drag the
+	# whole column wider with it. (No tooltip — the pill is MOUSE_FILTER_IGNORE and never
+	# receives the hover.)
+	p.add_child(_pill_text(Model.tag_label(text), txt))
 	return p
 
 

@@ -57,15 +57,10 @@ func _ready() -> void:
 func _build_overlays() -> void:
 	if editor != null:
 		return
+	# Full-rect overlay; it anchors and centers itself (see `task_editor.gd`).
 	editor = TaskEditor.new()
 	editor.setup(store)
 	editor.visible = false
-	editor.anchor_left = 1.0
-	editor.anchor_right = 1.0
-	editor.anchor_top = 0.0
-	editor.anchor_bottom = 1.0
-	editor.offset_left = -340.0
-	editor.offset_right = 0.0
 	add_child(editor)
 
 	epic_dialog = EpicDialog.new()
@@ -161,7 +156,7 @@ func _build_ui() -> void:
 
 	board_page.add_child(_build_toolbar())
 
-	# Hold the board in from the editor's left/right/bottom edges so the
+	# Hold the board in from the window's left/right/bottom edges so the
 	# first/last columns sit the same distance from the sides as between columns.
 	var board_margin := MarginContainer.new()
 	board_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL

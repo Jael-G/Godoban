@@ -118,7 +118,7 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Tags / Labels** | Free-form tags with a searchable picker; filter by any label. |
 | **Due Dates** | Set a due date via a hand-rolled calendar popup (Godot has no built-in one). |
 | **Descriptions** | Multi-line notes on every task. |
-| **Click to Edit** | Click any card to open it in the slide-in editor; columns have their own "+". |
+| **Click to Edit** | Click any card to open it in a modal popup over the board; columns have their own "+". |
 | **Collapsible Columns** | Fold a column to a narrow pill to reclaim space; state survives rebuilds. |
 
 **Where a dropped card lands**
@@ -288,7 +288,7 @@ addons/godoban/
 │   ├── board.gd                   # The board; "all" vs "epic", vertical/horizontal
 │   ├── column.gd                  # One status column; drop target, draws the insertion line
 │   ├── card.gd                    # One task card; drag source, click-to-edit
-│   ├── task_editor.gd             # Slide-in create/edit sidebar
+│   ├── task_editor.gd             # Modal create/edit popup (tag picker, due date, epic)
 │   ├── calendar_popup.gd          # Hand-rolled month-grid date picker
 │   ├── epic_dialog.gd             # Manage epics (title + color)
 │   ├── board_switcher.gd          # Toolbar chip popup: switch / create / import boards

@@ -363,6 +363,20 @@ func _gen_id(name: String) -> String:
 
 # --- task operations ---------------------------------------------------------
 
+## Every distinct tag in use on the current board, sorted. Shared by the task editor's tag
+## picker and the board's label filter.
+func all_tags() -> Array:
+	var seen := {}
+	for t in board.tasks:
+		for tag in t.tags:
+			seen[tag] = true
+	var out: Array = []
+	for k in seen:
+		out.append(k)
+	out.sort()
+	return out
+
+
 func upsert_task(id: String, title: String, description: String, status: String,
 		priority: String, epic_id: String, due_date: int, tags: Array) -> Model.Task:
 	var t := board.get_task(id)

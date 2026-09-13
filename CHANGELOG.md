@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.3.0] - 2026-09-12
+
+### Added
+
+- **Tags are picked, not typed.** The task editor lists every tag the board already uses in a
+  filterable, scrollable grid, with the selected ones as removable pills above it. Picking a
+  tag you made last week is a click instead of a spelling test; typing a name the board has
+  never used offers `+ Create "…"`. Matching is case-insensitive.
+- **Tags are capped at 24 characters.** The field stops accepting input at the limit (pastes
+  included) and shows a live `n/24` counter beside it. Tags already on a board that are longer
+  than this are left as they are — never silently rewritten — and display with an ellipsis.
+- Required fields (Title, Status) are marked with an asterisk.
+
+### Changed
+
+- **The task editor is a popup, not a sidebar.** It used to slide in from the right and take
+  340px from the board for as long as a task was open; it now opens centered over a dimmed
+  board, so the board keeps its full width while you edit. The header and footer stay fixed
+  while the form scrolls, and the popup is only as tall as its own contents.
+- The Due date button carries a calendar glyph; Status is plain text rather than carrying the
+  board's colored column dot.
+
 ## [1.2.0] - 2026-09-11
 
 ### Added

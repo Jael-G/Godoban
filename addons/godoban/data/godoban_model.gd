@@ -9,6 +9,27 @@ const STATUS_TITLES := ["Backlog", "To Do", "In Progress", "Review", "Done"]
 const PRIORITIES := ["low", "medium", "high", "critical"]
 const PRIORITY_TITLES := ["Low", "Medium", "High", "Critical"]
 
+## Maximum tag length. Tags are laid out to their own width everywhere they appear, so an
+## over-long one stretches its chip past the popup and its card pill wider than its column —
+## a layout break, not a cosmetic wart. 24 covers the compound names people actually write
+## (`needs-design-review`, `regression-test-required`) and still fits the picker's grid cells.
+const MAX_TAG_LEN := 24
+
+
+## Trims a tag at the point it enters a task. Only the input path clamps: tags already on a
+## board that exceed the limit (hand-edited JSON) are left as they are rather than silently
+## rewritten, and stay legible through `tag_label`.
+static func clamp_tag(tag: String) -> String:
+	return tag.strip_edges().substr(0, MAX_TAG_LEN)
+
+
+## A tag rendered where there may not be room for it whole. A no-op within the limit, so it
+## only shortens tags predating `MAX_TAG_LEN`; callers pair the ellipsis with a tooltip.
+static func tag_label(tag: String) -> String:
+	if tag.length() <= MAX_TAG_LEN:
+		return tag
+	return tag.substr(0, MAX_TAG_LEN) + "…"
+
 
 static func status_title(status: String) -> String:
 	var i := STATUSES.find(status)

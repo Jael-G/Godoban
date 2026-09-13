@@ -103,28 +103,17 @@ func _refresh_dynamic() -> void:
 		_epic.add_item(e.title)
 		_epic.set_item_metadata(_epic.item_count - 1, e.id)
 
-	var tags := _all_tags()
+	var tags: Array = store.all_tags()
 	_label.clear()
 	_label.add_item("All labels")
 	_label.set_item_metadata(0, "any")
 	for tag in tags:
-		_label.add_item(tag)
+		# Truncated for display only; the metadata below keeps the full tag.
+		_label.add_item(Model.tag_label(tag))
 		_label.set_item_metadata(_label.item_count - 1, tag)
 
 	_select_by_metadata(_epic, cur_epic)
 	_select_by_metadata(_label, cur_label)
-
-
-func _all_tags() -> Array:
-	var s := {}
-	for t in store.board.tasks:
-		for tag in t.tags:
-			s[tag] = true
-	var out: Array = []
-	for k in s:
-		out.append(k)
-	out.sort()
-	return out
 
 
 func _select_by_metadata(btn: OptionButton, value: String) -> void:

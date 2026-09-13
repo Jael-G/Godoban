@@ -59,7 +59,7 @@ dependency, so nothing ships in your exported game.
 - **Tags / labels** — free-form, with a searchable picker; filter by any label.
 - **Due dates** — set a date via a built-in calendar popup (Godot has no native date picker).
 - **Descriptions** — multi-line notes on each task.
-- **Click to edit** — any card opens in the slide-in editor; each column has its own "＋".
+- **Click to edit** — any card opens in a modal popup over the board; each column has its own "＋".
 
 **Epics**
 - Lightweight, color-coded groups of related tasks (a name and a color).
