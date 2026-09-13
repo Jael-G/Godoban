@@ -275,14 +275,20 @@ func _build_toolbar() -> Control:
 	actions.add_theme_constant_override("separation", 8)
 	vb.add_child(actions)
 
+	# The three board-wide actions. Each leads with the same Lucide glyph its own popup wears in
+	# the header (plus / layers-2 / tag), so the button and the panel it opens read as one thing.
+	# The glyph replaces the "+" that used to be typed into the label — a real icon lines up with
+	# the text baseline and the other two buttons' icons, which a bare ASCII "+" never did.
 	var new_btn := Button.new()
-	new_btn.text = "+ New Task"
+	new_btn.text = "New Task"
+	new_btn.icon = I.icon("plus", 16)
 	T.button(new_btn, true)
 	new_btn.pressed.connect(func(): _open_editor("", "backlog"))
 	actions.add_child(new_btn)
 
 	var epics_btn := Button.new()
 	epics_btn.text = "Epics"
+	epics_btn.icon = I.icon("layers-2", 16)
 	epics_btn.tooltip_text = "Manage epics"
 	T.button(epics_btn, true)
 	epics_btn.pressed.connect(func(): epic_dialog.open())
@@ -292,6 +298,7 @@ func _build_toolbar() -> Control:
 	# rather than creating something here.
 	var tags_btn := Button.new()
 	tags_btn.text = "Tags"
+	tags_btn.icon = I.icon("tag", 16)
 	tags_btn.tooltip_text = "Manage tags"
 	T.button(tags_btn, true)
 	tags_btn.pressed.connect(_open_tags)
@@ -510,6 +517,9 @@ func _on_board_switched(_id: String) -> void:
 		# Its rows name the *old* board's tags; the popup is rebuilt on open, so it only has to
 		# come down — leaving it up would offer renames into a board that's no longer on screen.
 		tags_dialog.hide()
+	if epic_dialog != null:
+		# Same, for the old board's epics.
+		epic_dialog.hide()
 	if filters_bar != null:
 		filters_bar.reset_scope()
 

@@ -217,7 +217,7 @@ func _build_body() -> Control:
 
 	_due_btn = Button.new()
 	_due_btn.text = "No due date"
-	_due_btn.icon = I.icon("calendar", 14)
+	_due_btn.icon = I.icon("calendar-days", 14)
 	_due_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	T.button(_due_btn)
 	_due_btn.add_theme_color_override("icon_normal_color", T.TEXT_DIM())

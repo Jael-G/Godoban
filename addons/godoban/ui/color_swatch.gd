@@ -31,6 +31,13 @@ func get_color() -> Color:
 	return _color
 
 
+## Open the picker as if the square itself had been clicked. For the small pipette button that
+## sits beside the square in the epics dialog — the square alone doesn't advertise that it is
+## clickable, and that button is the hint.
+func open_picker() -> void:
+	_open_popup()
+
+
 func _apply() -> void:
 	add_theme_stylebox_override("normal", _style(_color))
 	add_theme_stylebox_override("hover", _style(_color.lightened(0.07)))

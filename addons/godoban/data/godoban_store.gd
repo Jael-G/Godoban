@@ -364,7 +364,7 @@ func _gen_id(name: String) -> String:
 # --- task operations ---------------------------------------------------------
 
 ## Every tag on the board, sorted case-insensitively by name. Shared by the task editor's tag
-## picker and the board's label filter.
+## picker and the board's tag filter.
 ##
 ## This is the board's *vocabulary* (`Board.tags`), not a scan of the tasks: it includes tags
 ## nothing carries yet — that is the whole point of the vocabulary — and includes a name only a
@@ -563,6 +563,17 @@ func move_task(id: String, new_status: String, before_id := "") -> void:
 
 
 # --- epic operations ---------------------------------------------------------
+
+## How many tasks are assigned to `id`. The epics dialog's counterpart to `tag_usage`: it labels
+## each row with what deleting it would cost, and it is what decides whether deleting needs a
+## confirmation at all.
+func epic_usage(id: String) -> int:
+	var n := 0
+	for t in board.tasks:
+		if t.epic_id == id:
+			n += 1
+	return n
+
 
 func upsert_epic(id: String, title: String, color: String) -> Model.Epic:
 	var e := board.get_epic(id)

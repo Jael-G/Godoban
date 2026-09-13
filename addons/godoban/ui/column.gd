@@ -194,7 +194,7 @@ func _build() -> void:
 	_cards_wrap.add_child(_cards_container)
 
 	var empty_hint := Label.new()
-	empty_hint.text = "No features"
+	empty_hint.text = "No tasks"
 	empty_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	empty_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	empty_hint.add_theme_color_override("font_color", T.TEXT_FAINT())

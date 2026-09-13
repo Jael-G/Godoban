@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.5.0] - 2026-09-13
+
+### Changed
+
+- **The toolbar's New Task / Epics / Tags buttons now lead with an icon.** New Task trades the typed `+` for a real glyph, so the three labels line up and each button wears the same icon as the popup it opens.
+
+- **Every in-plugin icon is now verbatim [Lucide](https://lucide.dev)**, pinned to `lucide-static@1.45.0` (ISC). The tag and kanban glyphs had drifted from upstream (one hand-edited, two from an older release) and are back to stock. The editor plugin logo (`icon.svg`) remains a bespoke, hand-drawn mark.
+
+- **The Epics popup now works like the Tags popup.** Each epic is a row showing its color, title and how many tasks are
+  assigned to it, renamed in place from the row's pencil and deleted from its trash — the Save/Cancel staging is gone,
+  and edits land on the board (and in the file) as they're made. Deleting an epic that still has tasks asks for
+  confirmation first, naming how many will be unassigned.
+
+
 ## [1.4.0] - 2026-09-13
 
 ### Added

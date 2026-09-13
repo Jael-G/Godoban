@@ -115,7 +115,7 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Manual Order** | Columns are unsorted by default, so the arrangement you drag out is the arrangement you see, saved as you go. |
 | **5 Status Columns** | Backlog, To Do, In Progress, Review, and Done — a fixed canonical set. |
 | **Priorities** | Low, Medium, High, and Critical, color-coded on every card. |
-| **Tags / Labels** | Free-form tags with a searchable picker; filter by any label. The **Tags** button opens **Manage Tags** to create, rename (across every task that carried it) and delete them. |
+| **Tags** | Free-form tags with a searchable picker; filter by any tag. The **Tags** button opens **Manage Tags** to create, rename (across every task that carried it) and delete them. |
 | **Due Dates** | Set a due date via a hand-rolled calendar popup (Godot has no built-in one). |
 | **Descriptions** | Multi-line notes on every task. |
 | **Click to Edit** | Click any card to open it in a modal popup over the board; columns have their own "+". |
@@ -175,7 +175,7 @@ Find exactly what you're looking for, fast.
 | **7 Sort Modes** | **Manual** (the default — no sort, so your dragged arrangement stands), plus created (oldest/newest), latest edited, priority, due date, and alphabetical. Any other sort is a view on top of your manual order, never a replacement for it. |
 | **Filter by Priority** | Narrow to Low / Medium / High / Critical. |
 | **Filter by Epic** | Isolate a single epic. |
-| **Filter by Label** | Pick any tag; the picker even has its own search box. |
+| **Filter by Tag** | Pick any tag; the picker even has its own search box. |
 | **Date Bounds** | Overdue, due today, due this week (calendar Monday–Sunday), or no due date. |
 | **Composed Filters** | All filters combine (AND); empty results show a friendly hint. |
 
@@ -294,7 +294,7 @@ addons/godoban/
 │   ├── tags_dialog.gd             # Manage tags: create / rename / delete the board's vocabulary
 │   ├── modal_overlay.gd           # Shared modal chrome + list-row parts every popup builds on
 │   ├── board_switcher.gd          # Toolbar chip popup: switch / create / import boards
-│   ├── filters_bar.gd             # Search + sort + priority/epic/label/date filters
+│   ├── filters_bar.gd             # Search + sort + priority/epic/tag/date filters
 │   ├── overview.gd                # Full-page analytics dashboard
 │   ├── overview_widgets.gd        # Self-drawn ring/donut/bar widgets
 │   ├── theme.gd                   # Design tokens + StyleBox helpers (T.*)

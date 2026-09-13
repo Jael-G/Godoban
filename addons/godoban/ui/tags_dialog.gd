@@ -8,7 +8,7 @@ extends "res://addons/godoban/ui/modal_overlay.gd"
 ## moment it's typed — it shows up in the task editor's picker straight away with "0 tasks", ready
 ## to be assigned. Renaming rewrites the name on every task that carried the old one; deleting
 ## strips it from every task. Both are ordinary store mutators, so the board, the picker and the
-## label filter all follow through the store's `changed`.
+## tag filter all follow through the store's `changed`.
 ##
 ## There is no Save. A tag is a single field, so each edit is applied the moment it's committed —
 ## Enter or the check on a rename, the Create row, Delete in the confirmation — and the footer's

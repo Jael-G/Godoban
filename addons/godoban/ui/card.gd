@@ -150,7 +150,7 @@ func _due_label() -> Control:
 	row.add_theme_constant_override("separation", -1)
 	row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var cal := TextureRect.new()
-	cal.texture = I.icon("calendar", 11)
+	cal.texture = I.icon("calendar-days", 11)
 	cal.modulate = col
 	cal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cal.size_flags_vertical = Control.SIZE_SHRINK_CENTER

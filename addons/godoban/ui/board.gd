@@ -57,7 +57,8 @@ func _rebuild() -> void:
 
 func _build_board() -> void:
 	if store.board.tasks.is_empty():
-		add_child(_empty_hint("No tasks yet. Click \"+ New Task\" to get started."))
+		# Names the toolbar button by its label — the "+" that used to lead it is now an icon.
+		add_child(_empty_hint("No tasks yet. Click \"New Task\" to get started."))
 		return
 	var group: BoxContainer = HBoxContainer.new()
 	if orientation == "horizontal":
@@ -288,8 +289,8 @@ func _matches(t: Model.Task) -> bool:
 	if filters.has("epic") and filters["epic"] != "" and filters["epic"] != "any":
 		if t.epic_id != filters["epic"]:
 			return false
-	if filters.has("label") and filters["label"] != "" and filters["label"] != "any":
-		if filters["label"] not in t.tags:
+	if filters.has("tag") and filters["tag"] != "" and filters["tag"] != "any":
+		if filters["tag"] not in t.tags:
 			return false
 	if filters.has("date") and filters["date"] != "" and filters["date"] != "any":
 		if not _date_matches(t, filters["date"]):

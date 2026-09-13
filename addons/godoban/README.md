@@ -56,7 +56,7 @@ dependency, so nothing ships in your exported game.
 - **No sort by default** — columns keep your arrangement until you choose a sort, and the manual
   order is kept underneath the other six, so switching back to **Manual** restores it untouched.
 - **Priorities** — Low, Medium, High, Critical, color-coded on every card.
-- **Tags / labels** — free-form, with a searchable picker; filter by any label. The **Tags** button
+- **Tags** — free-form, with a searchable picker; filter by any tag. The **Tags** button
   in the toolbar opens **Manage Tags**, where tags are created, renamed in place, and deleted —
   renaming one updates every task that carried it, and a deletion says how many tasks it will
   touch before it happens.
@@ -66,6 +66,10 @@ dependency, so nothing ships in your exported game.
 
 **Epics**
 - Lightweight, color-coded groups of related tasks (a name and a color).
+- **Manage Epics** — the toolbar's **Epics** button opens a popup listing every epic with its color,
+  title and task count. Titles are renamed in place, colors picked from the square beside them (or
+  the pipette button pointing at it), and edits land as they're made; deleting one asks first when
+  tasks are still assigned to it.
 - **Per-epic view** — one compact board per epic, plus a "No Epic" board.
 - Cards show a colored epic chip in the all-tasks view; deleting an epic reassigns instead of
   orphaning its tasks.
@@ -76,7 +80,7 @@ dependency, so nothing ships in your exported game.
   created, latest edited, priority, due date, and alphabetical. Every other sort views your manual
   order through a lens rather than replacing it, so the arrangement is still there when you switch
   back.
-- Filter by priority, epic, or label; date bounds (overdue, due today, due this week, none).
+- Filter by priority, epic, or tag; date bounds (overdue, due today, due this week, none).
 - All filters combine; empty results show a friendly hint.
 
 **View modes**

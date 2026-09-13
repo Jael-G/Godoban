@@ -29,7 +29,7 @@ var _search: LineEdit
 var _sort: OptionButton
 var _priority: OptionButton
 var _epic: OptionButton
-var _label: OptionButton
+var _tag: OptionButton
 var _date: OptionButton
 
 func setup(p_store: RefCounted) -> void:
@@ -41,7 +41,7 @@ func _build() -> void:
 	add_theme_constant_override("v_separation", 8)
 
 	_search = LineEdit.new()
-	_search.placeholder_text = "Search features…"
+	_search.placeholder_text = "Search tasks…"
 	_search.clear_button_enabled = true
 	_search.custom_minimum_size.x = 220
 	_search.add_theme_font_size_override("font_size", 13)
@@ -65,11 +65,11 @@ func _build() -> void:
 
 	_epic = _make_option("All epics")
 
-	_label = _make_option("All labels")
-	_label.search_bar_enabled = true
-	_label.search_bar_fuzzy_search_enabled = true
-	_label.search_bar_fuzzy_search_max_misses = 2
-	_label.search_bar_min_item_count = 0  # keep the search bar visible even for short lists
+	_tag = _make_option("All tags")
+	_tag.search_bar_enabled = true
+	_tag.search_bar_fuzzy_search_enabled = true
+	_tag.search_bar_fuzzy_search_max_misses = 2
+	_tag.search_bar_min_item_count = 0  # keep the search bar visible even for short lists
 
 	_date = _make_option("All dates")
 	var date_opts := [["Overdue", "overdue"], ["Due today", "today"], ["Due this week", "week"], ["No due date", "none"]]
@@ -94,7 +94,7 @@ func _make_option(text: String) -> OptionButton:
 
 func _refresh_dynamic() -> void:
 	var cur_epic: String = str(_epic.get_item_metadata(_epic.selected)) if _epic.selected >= 0 else "any"
-	var cur_label: String = str(_label.get_item_metadata(_label.selected)) if _label.selected >= 0 else "any"
+	var cur_tag: String = str(_tag.get_item_metadata(_tag.selected)) if _tag.selected >= 0 else "any"
 
 	_epic.clear()
 	_epic.add_item("All epics")
@@ -104,16 +104,16 @@ func _refresh_dynamic() -> void:
 		_epic.set_item_metadata(_epic.item_count - 1, e.id)
 
 	var tags: Array = store.all_tags()
-	_label.clear()
-	_label.add_item("All labels")
-	_label.set_item_metadata(0, "any")
+	_tag.clear()
+	_tag.add_item("All tags")
+	_tag.set_item_metadata(0, "any")
 	for tag in tags:
 		# Truncated for display only; the metadata below keeps the full tag.
-		_label.add_item(Model.tag_label(tag))
-		_label.set_item_metadata(_label.item_count - 1, tag)
+		_tag.add_item(Model.tag_label(tag))
+		_tag.set_item_metadata(_tag.item_count - 1, tag)
 
 	_select_by_metadata(_epic, cur_epic)
-	_select_by_metadata(_label, cur_label)
+	_select_by_metadata(_tag, cur_tag)
 
 
 func _select_by_metadata(btn: OptionButton, value: String) -> void:
@@ -124,12 +124,12 @@ func _select_by_metadata(btn: OptionButton, value: String) -> void:
 	btn.select(0)
 
 
-## Clear the board-scoped dropdowns (epic + label) and re-emit, so a filter from one
-## board can't hide every task after we switch to a board that lacks that epic/label.
+## Clear the board-scoped dropdowns (epic + tag) and re-emit, so a filter from one
+## board can't hide every task after we switch to a board that lacks that epic/tag.
 ## General filters (search, sort, priority, date) are left alone.
 func reset_scope() -> void:
 	_epic.select(0)
-	_label.select(0)
+	_tag.select(0)
 	_emit()
 
 
@@ -139,7 +139,7 @@ func get_filters() -> Dictionary:
 		"sort": str(_sort.get_item_metadata(_sort.selected)),
 		"priority": str(_priority.get_item_metadata(_priority.selected)),
 		"epic": str(_epic.get_item_metadata(_epic.selected)),
-		"label": str(_label.get_item_metadata(_label.selected)),
+		"tag": str(_tag.get_item_metadata(_tag.selected)),
 		"date": str(_date.get_item_metadata(_date.selected)),
 	}
 

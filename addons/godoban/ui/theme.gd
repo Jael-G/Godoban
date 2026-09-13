@@ -188,6 +188,12 @@ static func button(b, accent := false) -> void:
 	for s in ["font_color", "font_hover_color", "font_pressed_color",
 			"font_hover_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(s, tc)
+	# A glyph does not follow the label color, and every icon here is baked white (icons.gd) —
+	# so on the light theme, where the accent text is near-black on a bright accent fill, an
+	# untinted icon would disappear into its own button. Track the font colors.
+	for s in ["icon_normal_color", "icon_hover_color", "icon_pressed_color",
+			"icon_hover_pressed_color", "icon_focus_color", "icon_disabled_color"]:
+		b.add_theme_color_override(s, tc)
 
 
 static func flat_button(b) -> void:
