@@ -31,6 +31,12 @@ const BAND_SEP := 10
 var panel: PanelContainer
 var content: VBoxContainer
 var header: HBoxContainer
+## The header's title Label, always built and hidden while `_modal_title()` is empty (a
+## `BoxContainer` skips an invisible child, so a title-less modal's header measures exactly as it
+## did when no label was added at all). A subclass whose title is *content* rather than a constant
+## — the task view's is the task's name, and it isn't known until `open()` — writes it through
+## `_set_heading()`.
+var heading: Label
 ## The list this modal scrolls, if any. Subclasses assign it in `_build_body` so `_apply_fit` can
 ## cap its height and keep the panel inside the editor; left null, the panel is just its content's
 ## height. `list_min_h` / `list_max_h` are the floor and ceiling it gets clamped between.
@@ -107,14 +113,13 @@ func _build_header() -> HBoxContainer:
 		glyph.modulate = T.TEXT()
 		h.add_child(glyph)
 
-	var heading := _modal_title()
-	if heading != "":
-		var t := Label.new()
-		t.text = heading
-		t.add_theme_font_override("font", T.title_font(0.7, 1.0))
-		t.add_theme_font_size_override("font_size", 16)
-		t.add_theme_color_override("font_color", T.TEXT())
-		h.add_child(t)
+	heading = Label.new()
+	heading.text = _modal_title()
+	heading.add_theme_font_override("font", T.title_font(0.7, 1.0))
+	heading.add_theme_font_size_override("font_size", 16)
+	heading.add_theme_color_override("font_color", T.TEXT())
+	heading.visible = heading.text != ""
+	h.add_child(heading)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -309,9 +314,24 @@ func _unhandled_input(event: InputEvent) -> void:
 func _modal_icon() -> String:
 	return ""
 
-## Heading text; "" for a header that is just the ✕.
+## Heading text; "" for a header that is just the ✕. Read once per build, so it is for titles that
+## are known by then — a constant, or something the subclass stashed. A title that is only known
+## once the modal is open goes through `_set_heading()` instead.
 func _modal_title() -> String:
 	return ""
+
+
+## Set the heading after the fact. For a title that is content (the task view's is the task's own
+## name), which `_modal_title()` can't supply because the header is built before anything is open.
+##
+## Deliberately not clipping the label here: the spacer is the only expanding child in the header, so
+## a clipped heading would be squeezed to nothing in every existing dialog. A subclass whose title
+## can be arbitrarily long opts in itself — see `task_view._on_rebuilt`.
+func _set_heading(text: String) -> void:
+	if heading == null:
+		return
+	heading.text = text
+	heading.visible = text != ""
 
 ## Widgets between the title and the ✕ — a count, a hint. Null for none.
 func _modal_header_extras() -> Control:

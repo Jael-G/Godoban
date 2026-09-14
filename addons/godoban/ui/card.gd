@@ -1,7 +1,7 @@
 @tool
 extends PanelContainer
 
-## One task card: drag source + drop target, click-to-edit. Flat dark panel
+## One task card: drag source + drop target, click-to-view. Flat dark panel
 ## modeled on the reference: title (top-left, wraps up to 2 lines) + a compact
 ## text-only priority label (top-right), a dim up-to-2-line description, then
 ## the tags as small tight pills that wrap, and a footer with the epic

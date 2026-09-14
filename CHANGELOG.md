@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.6.0] - 2026-09-14
+
+### Added
+
+- **Clicking a card now reads the task instead of editing it.** A card click opens a **task view** —
+  status, priority, epic, created / due / updated dates, tags and the description on one page — with
+  an **Edit** button that swaps to the task editor. Adding a task through a column's `+` still goes
+  straight to the editor, since there is nothing to read yet.
+
+
 ## [1.5.1] - 2026-09-13
 
 ### Fixed

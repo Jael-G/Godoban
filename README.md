@@ -117,8 +117,8 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Priorities** | Low, Medium, High, and Critical, color-coded on every card. |
 | **Tags** | Free-form tags with a searchable picker; filter by any tag. The **Tags** button opens **Manage Tags** to create, rename (across every task that carried it) and delete them. |
 | **Due Dates** | Set a due date via a hand-rolled calendar popup (Godot has no built-in one). |
-| **Descriptions** | Multi-line notes on every task. |
-| **Click to Edit** | Click any card to open it in a modal popup over the board; columns have their own "+". |
+| **Descriptions** | Multi-line notes on every task, shown in full in the task view. |
+| **Click to View** | Click any card to read it in a modal popup over the board — status, dates, tags and description — with an **Edit** button to change it. Columns have their own "+", which opens the editor directly. |
 | **Collapsible Columns** | Fold a column to a narrow pill to reclaim space; state survives rebuilds. |
 
 **Where a dropped card lands**

@@ -9,6 +9,7 @@ extends Control
 const GodobanStore = preload("res://addons/godoban/data/godoban_store.gd")
 const Board = preload("res://addons/godoban/ui/board.gd")
 const TaskEditor = preload("res://addons/godoban/ui/task_editor.gd")
+const TaskView = preload("res://addons/godoban/ui/task_view.gd")
 const EpicDialog = preload("res://addons/godoban/ui/epic_dialog.gd")
 const TagsDialog = preload("res://addons/godoban/ui/tags_dialog.gd")
 const FiltersBar = preload("res://addons/godoban/ui/filters_bar.gd")
@@ -25,6 +26,7 @@ const CHIP_NAME_MAX_CHARS := 20
 var store: GodobanStore
 var board: Board
 var editor: TaskEditor
+var task_view: TaskView
 var epic_dialog: EpicDialog
 var tags_dialog: TagsDialog
 var filters_bar: FiltersBar
@@ -57,10 +59,10 @@ func _ready() -> void:
 	_build_overlays()
 
 
-## Builds the task editor + dialogs once; they persist across chrome rebuilds so an open edit
-## survives a theme change (they restyle themselves instead — see `_rebuild_chrome`). Added after
-## the chrome so they layer on top, and in this order — each one added later covers the ones
-## before it: editor < epics < boards < message.
+## Builds the task view, the task editor + dialogs once; they persist across chrome rebuilds so an
+## open edit survives a theme change (they restyle themselves instead — see `_rebuild_chrome`).
+## Added after the chrome so they layer on top, and in this order — each one added later covers the
+## ones before it: editor < view < epics < boards < message.
 func _build_overlays() -> void:
 	if editor != null:
 		return
@@ -70,6 +72,14 @@ func _build_overlays() -> void:
 	editor.setup(store)
 	editor.visible = false
 	add_child(editor)
+
+	# Directly above the editor and nowhere else: the only two overlays that are never up at the
+	# same time are these two (Edit puts one down and the other up), so the pair has to keep its
+	# relative order for `owns_escape` to answer "who owns ESC" correctly.
+	task_view = TaskView.new()
+	task_view.setup(store)
+	add_child(task_view)
+	task_view.edit_requested.connect(func(id): editor.open_edit(id))
 
 	epic_dialog = EpicDialog.new()
 	epic_dialog.setup(store)
@@ -114,7 +124,7 @@ func _build_overlays() -> void:
 ## throw that state away, and rebuilding them twice in one frame would be wasted work.
 func _rebuild_chrome() -> void:
 	for c in get_children():
-		if c == editor or c == epic_dialog or c == tags_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
+		if c == editor or c == task_view or c == epic_dialog or c == tags_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
 			continue
 		remove_child(c)
 		c.free()
@@ -122,9 +132,12 @@ func _rebuild_chrome() -> void:
 	_tabs.clear()
 	_chip_name_label = null
 	_build_ui()
-	# Overlays were added before the chrome, so raise them back to the top.
+	# Overlays were added before the chrome, so raise them back to the top — in the same order
+	# `_build_overlays` added them, or `owns_escape` would hand ESC to the wrong overlay.
 	if editor != null:
 		move_child(editor, get_child_count() - 1)
+	if task_view != null:
+		move_child(task_view, get_child_count() - 1)
 	if epic_dialog != null:
 		move_child(epic_dialog, get_child_count() - 1)
 	if tags_dialog != null:
@@ -199,7 +212,7 @@ func _build_ui() -> void:
 	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	board.setup(store)
-	board.open_requested.connect(func(id): _open_editor(id, ""))
+	board.open_requested.connect(_open_task_view)
 	board.add_requested.connect(func(s): _open_editor("", s))
 	scroll.add_child(board)
 
@@ -518,6 +531,9 @@ func _on_board_switched(_id: String) -> void:
 	_apply_board_state()
 	if editor != null:
 		editor.hide()
+	if task_view != null:
+		# It is showing the *old* board's task.
+		task_view.hide()
 	if tags_dialog != null:
 		# Its rows name the *old* board's tags; the popup is rebuilt on open, so it only has to
 		# come down — leaving it up would offer renames into a board that's no longer on screen.
@@ -566,3 +582,11 @@ func _open_editor(task_id: String, status: String) -> void:
 		editor.open_edit(task_id)
 	else:
 		editor.open_new(status)
+
+
+## A card was clicked: read it, don't edit it. The editor is still one Edit button away, and the
+## board's `+` buttons still open it directly for a new task.
+func _open_task_view(task_id: String) -> void:
+	if task_view == null:
+		return
+	task_view.open(task_id)
