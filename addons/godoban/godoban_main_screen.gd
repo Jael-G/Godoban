@@ -58,8 +58,9 @@ func _ready() -> void:
 
 
 ## Builds the task editor + dialogs once; they persist across chrome rebuilds so an open edit
-## survives a theme change. Added after the chrome so they layer on top, and in this order —
-## each one added later covers the ones before it: editor < epics < boards < message.
+## survives a theme change (they restyle themselves instead — see `_rebuild_chrome`). Added after
+## the chrome so they layer on top, and in this order — each one added later covers the ones
+## before it: editor < epics < boards < message.
 func _build_overlays() -> void:
 	if editor != null:
 		return
@@ -104,9 +105,13 @@ func _build_overlays() -> void:
 	store.board_import_rejected.connect(func(): show_message("That board is already on the list."))
 
 
-## Rebuilds the theme-colored chrome when the editor theme changes, keeping the
-## task editor + epics dialog (and any open edit) intact. Colors resolve through
+## Rebuilds the theme-colored chrome when the editor theme changes. Colors resolve through
 ## the editor theme, so re-applying them repaints every surface.
+##
+## The overlays are skipped because they rebuild *themselves* (see
+## `modal_overlay.rebuild_for_theme` and `task_editor._rebuild_for_theme`), each carrying its own
+## state across — that's what lets an open edit survive a theme change. Freeing them here would
+## throw that state away, and rebuilding them twice in one frame would be wasted work.
 func _rebuild_chrome() -> void:
 	for c in get_children():
 		if c == editor or c == epic_dialog or c == tags_dialog or c == board_switcher or c == _import_dialog or c == _message_box:

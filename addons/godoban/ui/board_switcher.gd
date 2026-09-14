@@ -36,6 +36,21 @@ func setup(p_store: RefCounted, p_import_dialog: FileDialog) -> void:
 	list_min_h = 160.0
 	list_max_h = 320.0
 	_build()
+	_on_rebuilt()
+
+
+## Everything that follows `_build()` — run once at setup and again by `rebuild_for_theme`
+## (see `modal_overlay.gd`), which is why the row build isn't in `setup()`. `setup()` itself must
+## not be re-run: it connects `store.board_missing` and the import dialog's `file_selected`, and a
+## second connection would fire each of them twice.
+func _on_rebuilt() -> void:
+	# The rows are gone, so any row that was in rename mode is too.
+	_editing_box = null
+	# The same state `open()` starts from: the list and its two actions, with the create box put
+	# away — its field is empty on a fresh build.
+	_create_box.visible = false
+	_action_row.visible = true
+	_rebuild_rows()
 
 
 func _modal_icon() -> String:

@@ -69,9 +69,21 @@ func setup(p_store: RefCounted) -> void:
 	list_min_h = 170.0
 	list_max_h = 340.0
 	_build()
-	# After `_build`: the panel only exists once the base class has made it.
+	_on_rebuilt()
+
+
+## Everything that follows `_build()` — run once at setup and again by `rebuild_for_theme`
+## (see `modal_overlay.gd`), which is why none of it lives in `setup()`.
+func _on_rebuilt() -> void:
+	# After `_build`: the panel only exists once the base class has made it. `_build` hands it the
+	# base MODAL_W, so this is also what re-widens it on a rebuild.
 	panel.custom_minimum_size.x = PANEL_W
 	_build_confirm()
+	# The rows are gone, so any row that was in rename mode is too — and the confirmation is a new,
+	# hidden popup, so what the old one was about is stale.
+	_editing_box = null
+	_confirm_pending = ""
+	_rebuild_rows()
 
 
 func _modal_icon() -> String:

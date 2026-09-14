@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.5.1] - 2026-09-13
+
+### Fixed
+
+- **Popups now follow a live theme switch.** Switching the editor theme repainted the board and toolbar
+  immediately, but the task editor, Epics, Tags, Boards and Notice popups kept the old palette until the
+  plugin was reloaded. Each now restyles itself the moment the palette actually changes.
+
+
 ## [1.5.0] - 2026-09-13
 
 ### Changed

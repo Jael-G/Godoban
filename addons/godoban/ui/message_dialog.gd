@@ -10,10 +10,19 @@ extends "res://addons/godoban/ui/modal_overlay.gd"
 ## are inherited from it.
 
 var _label: Label
+## The message, held rather than only living in the label: a theme rebuild replaces the label
+## (see `modal_overlay.gd`), and the notice is usually on screen when the theme changes.
+var _text := ""
 
 
 func setup() -> void:
 	_build()
+	_on_rebuilt()
+
+
+## Everything that follows `_build()` — run once at setup and again by `rebuild_for_theme`.
+func _on_rebuilt() -> void:
+	_label.text = _text
 
 
 func _modal_title() -> String:
@@ -37,5 +46,6 @@ func _build_body(v: VBoxContainer) -> void:
 
 
 func show_text(text: String) -> void:
+	_text = text
 	_label.text = text
 	_show_modal()

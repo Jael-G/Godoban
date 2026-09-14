@@ -71,6 +71,31 @@ static func ACCENT_HOVER() -> Color: return ACCENT().lerp(TEXT(), 0.12)
 # light one — mirroring how Godot renders its own accent-colored buttons.
 static func ACCENT_TEXT() -> Color:
 	return Color("#0f1011") if not _editor_dark() else Color.WHITE
+
+
+## A fingerprint of the chrome palette as it stands right now.
+##
+## Godot repaints nothing for us: every Godoban surface bakes these colors into literal
+## stylebox/color overrides at build time and never re-reads them, so following a theme switch
+## means rebuilding the widget tree (see `modal_overlay.rebuild_for_theme`). This is how a
+## rebuild knows it *has* work to do. It has to be asked, because a `Control` receives
+## `NOTIFICATION_THEME_CHANGED` on `ENTER_TREE` as well as on a real theme change — without the
+## check, every overlay would rebuild itself on every plugin load for nothing.
+##
+## XOR of the tokens, so a move in any one of them changes the answer. Semantic colors
+## (`STATUS_COLORS`, `PRIORITY_COLORS`, `OVERDUE`) are deliberately out: they're authored for
+## intent, not for theming, so they don't move with the theme.
+static func chrome_sig() -> int:
+	var tokens: Array[Color] = [
+		BG(), BG_PANEL(), BG_INPUT(), BG_HOVER(), BORDER(), BORDER_SOFT(),
+		TEXT(), TEXT_DIM(), TEXT_FAINT(), ACCENT(),
+	]
+	var sig := 0
+	for c in tokens:
+		sig ^= c.to_rgba32()
+	return sig
+
+
 # Display-only shortening for single-line surfaces whose width must not follow their text
 # (the board chip, the switcher rows): anything past `max_chars` is dropped and an ellipsis
 # appended. Character-based rather than width-based, so callers get a hard, predictable

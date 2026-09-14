@@ -14,6 +14,9 @@ extends Control
 ## A subclass fills `_modal_icon` / `_modal_title` / `_build_body`, calls `_build()` from its
 ## `setup()`, and ends its `open()` with `_show_modal()`. `_cancel()` is what the ✕, ESC and a
 ## backdrop click all funnel into, so dismissal stays in one place.
+##
+## A subclass also moves whatever it did after `_build()` in `setup()` into `_on_rebuilt()` —
+## see the theme section below.
 
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
@@ -37,6 +40,8 @@ var list_max_h := 320.0
 
 ## True while a fit is already queued for the end of this frame; see `_fit_to_view`.
 var _fit_queued := false
+## The palette this modal's chrome was colored from, as of the last build. See `T.chrome_sig()`.
+var _baked_sig := 0
 
 
 func _build() -> void:
@@ -76,9 +81,14 @@ func _build() -> void:
 	content.add_child(header)
 	_build_body(content)
 
-	resized.connect(_fit_to_view)
+	# `resized` is this node's own signal and this node outlives the rebuild, so the callable
+	# must not be connected a second time; see `rebuild_for_theme`.
+	if not resized.is_connected(_fit_to_view):
+		resized.connect(_fit_to_view)
 	# A `Control` is visible the moment it's built, unlike the `PopupPanel`s this replaces.
 	visible = false
+	# What this chrome was colored from — the answer `_ensure_fresh` compares against.
+	_baked_sig = T.chrome_sig()
 
 
 ## Header: mode glyph, title, whatever the subclass adds, then the ✕. Same left-to-right order as
@@ -130,8 +140,78 @@ func _build_header() -> HBoxContainer:
 
 ## Reveals the modal and sizes its list to the window. `open()` on the subclass calls this last.
 func _show_modal() -> void:
+	_ensure_fresh()
 	visible = true
 	_fit_to_view()
+
+
+# --- theme ---------------------------------------------------------------------
+# The editor can swap its whole palette at any time (Editor Settings → Interface → Theme).
+# Nothing here repaints for that: every stylebox and color on these panels is a literal override
+# baked at build time, so the only way to follow the switch is to build the modal again — the
+# same answer the main screen gives for its chrome. Without this the popups kept the old palette
+# until the plugin was reloaded.
+
+
+## Follow the editor's palette. Deferred rather than handled in place: the notification arrives
+## mid-walk (Godot notifies a control and *then* iterates its children) and this frees children.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_THEME_CHANGED or panel == null:
+		return
+	if T.chrome_sig() == _baked_sig:
+		return
+	call_deferred("rebuild_for_theme")
+
+
+## Rebuild the whole modal — backdrop, panel, header and the subclass's body — so every baked
+## chrome color re-resolves against the editor theme as it is now.
+##
+## A burst of notifications in one frame collapses into this one call, because the signature it
+## re-checks is only updated once the rebuild is done. Anything the user had open *inside* the
+## modal goes with it: the delete confirmation, a row's rename field, the date picker, and the
+## epics dialog's color picker — all of them are children of this node.
+func rebuild_for_theme() -> void:
+	if T.chrome_sig() == _baked_sig:
+		return
+	var was_visible := visible
+	_before_rebuild()
+	for c in get_children():
+		remove_child(c)
+		c.free()
+	# Replaced by the subclass's `_build_body`; the rebuild is atomic, so no queued fit can see
+	# the gap.
+	list = null
+	_build()
+	_on_rebuilt()
+	visible = was_visible
+	_fit_to_view()
+
+
+## The notification's own check, asked on the way in instead. Cheap, and it means a modal is
+## never shown in a palette it wasn't built for even if a notification was missed.
+## `_show_modal()` calls it, which is the one door every subclass's `open()` goes out through.
+func _ensure_fresh() -> void:
+	if panel != null and T.chrome_sig() != _baked_sig:
+		rebuild_for_theme()
+
+
+## Stash anything the children hold that has to survive a rebuild — the only moment it can be
+## read is before they're freed. `_on_rebuilt()` puts it back.
+func _before_rebuild() -> void:
+	pass
+
+
+## Everything a subclass did after `_build()` when it first set itself up: its own panel width,
+## its own popups, its first rows. Called by `rebuild_for_theme` in place of `setup()`, which
+## must not be re-run — it connects the store's signals, so a second connection would fire every
+## handler twice.
+##
+## Nor style *this* node from here: `add_theme_*_override` sends `NOTIFICATION_THEME_CHANGED` to
+## the control the override lands on, so overriding self would ask for another rebuild. Every
+## override belongs on a child (which is where they already are, most of them set before
+## `add_child`), and the signature check makes the mistake harmless anyway.
+func _on_rebuilt() -> void:
+	pass
 
 
 ## Collapsed: a burst of calls in one frame needs one fit, not several.

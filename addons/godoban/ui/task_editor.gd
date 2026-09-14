@@ -68,6 +68,8 @@ var _save_btn: Button
 var _delete_btn: Button
 var _calendar: Calendar
 var _confirm: PopupPanel
+## The palette this popup's chrome was colored from, as of the last build. See `T.chrome_sig()`.
+var _baked_sig := 0
 
 func setup(p_store: RefCounted) -> void:
 	store = p_store
@@ -110,13 +112,105 @@ func _build() -> void:
 	v.add_child(_build_body())
 	v.add_child(_build_footer())
 
-	resized.connect(_fit_to_view)
+	# `resized` is this node's own signal and this node outlives a theme rebuild, so the callable
+	# must not be connected a second time; see `_rebuild_for_theme`.
+	if not resized.is_connected(_fit_to_view):
+		resized.connect(_fit_to_view)
 
 	_calendar = Calendar.new()
 	add_child(_calendar)
 	_calendar.date_selected.connect(_on_date_selected)
 
 	_build_confirm()
+
+	# What this chrome was colored from — the answer `_ensure_fresh` compares against.
+	_baked_sig = T.chrome_sig()
+
+
+# --- theme ---------------------------------------------------------------------
+# Same problem and same answer as `modal_overlay.gd`: every color on this panel is a literal
+# override baked at build time, so following an editor theme switch means building the panel
+# again. What makes it more than a plain rebuild is the draft — this popup's whole contract is
+# that nothing reaches the store until Save, so an unsaved edit has to come through it.
+
+
+## Follow the editor's palette. Deferred rather than handled in place: the notification arrives
+## mid-walk (Godot notifies a control and *then* iterates its children) and this frees children.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_THEME_CHANGED or _panel == null:
+		return
+	if T.chrome_sig() == _baked_sig:
+		return
+	call_deferred("_rebuild_for_theme")
+
+
+## The notification's own check, asked on the way in instead — the popup is never shown in a
+## palette it wasn't built for, even if a notification was missed.
+func _ensure_fresh() -> void:
+	if _panel != null and T.chrome_sig() != _baked_sig:
+		_rebuild_for_theme()
+
+
+## Rebuild the panel against the current palette, carrying the draft across.
+##
+## The fields *are* the draft — nothing is staged anywhere else until Save — so everything about
+## them has to come back: the title and description with their carets, the three pickers, the
+## tags, the due date, and the state the header and footer were in. Three things deliberately do
+## not: the date picker and the delete confirmation (children of this node, along with the panel
+## that was behind them), the tag *filter* field — a way of browsing the picker rather than part
+## of the task — and the focus, which is only restored when it sat in the title or description.
+func _rebuild_for_theme() -> void:
+	if T.chrome_sig() == _baked_sig:
+		return
+	var title := _title.text
+	var title_caret := _title.caret_column
+	var desc := _desc.text
+	# A TextEdit exposes its caret as a pair of getters, unlike a LineEdit's `caret_column`.
+	var desc_caret := Vector2i(_desc.get_caret_column(), _desc.get_caret_line())
+	var status := _status_btn.selected
+	var priority := _priority_btn.selected
+	# By index, not by epic id: item 0 ("None") carries no metadata, so an id lookup can't find it
+	# — `_select_epic("")` never matches anything.
+	var epic := _epic_btn.selected
+	var save_text := _save_btn.text
+	var deletable := _delete_btn.visible
+	var icon := _head_icon.texture
+	var was_visible := visible
+	# Read before the free below: the focused widget is about to be one of the freed ones.
+	var focus := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	var focused := "title" if focus == _title else ("desc" if focus == _desc else "")
+
+	for c in get_children():
+		remove_child(c)
+		c.free()
+	_build()
+
+	_title.text = title
+	# The heading follows the title, so it's re-derived rather than restored.
+	_on_title_changed(title)
+	_title.caret_column = title_caret
+	_desc.text = desc
+	_desc.set_caret_line(desc_caret.y)
+	_desc.set_caret_column(desc_caret.x)
+	_refresh_epics()
+	_status_btn.select(status)
+	_priority_btn.select(priority)
+	# Clamped: an epic deleted while the panel was open would leave the index past the end, and
+	# `select` faults on that rather than ignoring it.
+	_epic_btn.select(clampi(epic, -1, _epic_btn.item_count - 1))
+	_refresh_due()
+	# Not `_reset_tag_ui()`: the rebuilt filter field is already empty, and only the chips and the
+	# grid need repainting from `_tags`, which the rebuild never touches.
+	_refresh_tags()
+	_save_btn.text = save_text
+	_delete_btn.visible = deletable
+	_head_icon.texture = icon
+	visible = was_visible
+	if focused == "title":
+		_title.grab_focus()
+	elif focused == "desc":
+		_desc.grab_focus()
+	_fit_to_view()
 
 
 ## Header: mode glyph, title, ✕. The title mirrors the Title field (see `_on_title_changed`).
@@ -481,6 +575,8 @@ func _apply_fit() -> void:
 
 
 func open_new(status: String) -> void:
+	# Before anything is written into the fields: a rebuild replaces them.
+	_ensure_fresh()
 	editing_id = ""
 	_default_status = status
 	_due_ts = 0
@@ -502,6 +598,8 @@ func open_new(status: String) -> void:
 
 
 func open_edit(task_id: String) -> void:
+	# Before anything is written into the fields: a rebuild replaces them.
+	_ensure_fresh()
 	var task = store.board.get_task(task_id)
 	if task == null:
 		return
