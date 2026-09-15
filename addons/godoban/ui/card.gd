@@ -13,6 +13,10 @@ const I = preload("res://addons/godoban/ui/icons.gd")
 
 const TITLE_LINES := 2
 const DESC_LINES := 2
+## Hover tooltip body: the description re-flowed into a readable column that doesn't depend on
+## how narrow the owning column has been dragged, capped so a wall of text can't cover the board.
+const TOOLTIP_WIDTH := 320
+const TOOLTIP_LINES := 12
 
 signal open_requested(task_id: String)
 
@@ -20,6 +24,9 @@ var store: RefCounted
 var task: Model.Task
 var _show_epic := true
 var _base_style: StyleBoxFlat
+## The description label, kept so `_make_custom_tooltip` can ask whether the card is actually
+## hiding anything (the label knows its own wrapped line count; the model doesn't).
+var _desc_label: Label
 ## The owning column. Because this card is MOUSE_FILTER_STOP, a drag-and-drop over
 ## it is resolved against the card (Godot stops the ancestor walk here), so the
 ## card forwards the drop to its column. Set by the column when the card is built.
@@ -63,6 +70,7 @@ func _build() -> void:
 	var desc := _lines_label(task.description, T.TEXT_DIM(), 10, DESC_LINES)
 	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(desc)
+	_desc_label = desc
 
 	# Tags: small tight pills that wrap (only if any).
 	if not task.tags.is_empty():
@@ -226,6 +234,38 @@ func _on_hover(hovered: bool) -> void:
 	s.bg_color = T.BG_HOVER() if hovered else _base_style.bg_color
 	s.border_color = T.BORDER() if hovered else _base_style.border_color
 	add_theme_stylebox_override("panel", s)
+
+
+## Hovering a card shows the description it had to cut off. This is Godot's own tooltip path:
+## the viewport calls this override (even with no `tooltip_text` set), parents whatever we return
+## to a `PopupPanel` themed as `TooltipPanel`, and handles placement, screen-edge flipping and
+## dismissal. So we supply the body only — no panel, no margins, no positioning, no timer, and no
+## popup of our own. The popup sizes itself to the returned control's minimum size, which is why
+## the body carries an explicit width: a wrapping Label left to itself would report one word's
+## width and the description would re-wrap to the column's width instead of a readable one.
+##
+## Returning `null` means "no tooltip" — that's the whole "only when there's something to see"
+## rule: a description that already fits on the card, or an empty one, stays quiet.
+##
+## Note this fires on the *project-wide* tooltip delay (`gui/timers/tooltip_delay_sec`, 0.5s by
+## default); Godot exposes no per-control delay, and `Viewport.show_tooltip` isn't script-callable,
+## so the timing isn't ours to tune.
+func _make_custom_tooltip(_for_text: String) -> Control:
+	if _desc_label == null or task.description.is_empty():
+		return null
+	# `get_line_count()` is the total *wrapped* count — `max_lines_visible` only clamps what's
+	# drawn — so this is a real truncation test, not a guess at the text's length.
+	if _desc_label.get_line_count() <= DESC_LINES:
+		return null
+	var body := Label.new()
+	body.text = task.description
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	body.max_lines_visible = TOOLTIP_LINES
+	body.custom_minimum_size = Vector2(TOOLTIP_WIDTH, 0)
+	body.add_theme_color_override("font_color", T.TEXT())
+	body.add_theme_font_size_override("font_size", 11)
+	return body
 
 
 func _gui_input(event: InputEvent) -> void:

@@ -117,7 +117,7 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Priorities** | Low, Medium, High, and Critical, color-coded on every card. |
 | **Tags** | Free-form tags with a searchable picker; filter by any tag. The **Tags** button opens **Manage Tags** to create, rename (across every task that carried it) and delete them. |
 | **Due Dates** | Set a due date via a hand-rolled calendar popup (Godot has no built-in one). |
-| **Descriptions** | Multi-line notes on every task, shown in full in the task view. |
+| **Descriptions** | Multi-line notes on every task, shown in full in the task view — and on hover, for a card whose preview has to trim them. |
 | **Click to View** | Click any card to read it in a modal popup over the board — status, dates, tags and description — with an **Edit** button to change it. Columns have their own "+", which opens the editor directly. |
 | **Collapsible Columns** | Fold a column to a narrow pill to reclaim space; state survives rebuilds. |
 
@@ -268,6 +268,7 @@ Godoban is a self-contained editor plugin. You can drop it straight into any God
 | **Persistence** | Per-board pretty-printed JSON + a `boards.json` registry, via `FileAccess` + `JSON` |
 | **UI** | Native `Control` nodes, no scene files — the whole board is built in code |
 | **Design System** | Editor-native theme (`theme.gd`, resolves colors from Godot's editor theme) + rasterized SVG glyphs (`icons.gd`) |
+| **Tooltips** | Godot's own tooltip system (`Control._make_custom_tooltip` into a `TooltipPanel` popup) — the plugin draws the text only. The hover delay is the engine's, not the plugin's: project-wide `gui/timers/tooltip_delay_sec`, 0.5s by default |
 
 ---
 

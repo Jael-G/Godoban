@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.7.0] - 2026-09-14
+
+### Added
+
+- **Hovering a card shows the description it had to cut off.** The card keeps its two-line preview;
+  holding the pointer there floats the full text in a tooltip. A description that already fits, or an
+  empty one, shows nothing. The wait is Godot's, not the plugin's: the tooltip rides the engine's own
+  tooltip system, so it appears on the project-wide `gui/timers/tooltip_delay_sec` (0.5s by default)
+  rather than a delay of Godoban's choosing.
+
+
 ## [1.6.0] - 2026-09-14
 
 ### Added

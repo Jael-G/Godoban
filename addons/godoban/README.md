@@ -61,7 +61,8 @@ dependency, so nothing ships in your exported game.
   renaming one updates every task that carried it, and a deletion says how many tasks it will
   touch before it happens.
 - **Due dates** — set a date via a built-in calendar popup (Godot has no native date picker).
-- **Descriptions** — multi-line notes on each task.
+- **Descriptions** — multi-line notes on each task; a card whose preview trims them keeps the rest
+  in a hover tooltip.
 - **Click to edit** — any card opens in a modal popup over the board; each column has its own "＋".
 
 **Epics**
@@ -120,6 +121,11 @@ Boards live under **`res://godoban_boards/`**:
 
 - The entire UI is built in GDScript at runtime — there are no scene files to edit. Visual changes
   are code changes.
+- **The hover tooltip's delay belongs to Godot, not to Godoban.** A card's tooltip (and every other
+  tooltip in the editor) waits on the project-wide `gui/timers/tooltip_delay_sec` — **Project
+  Settings → GUI → Timers → Tooltip Delay Sec**, 0.5s out of the box. Godot exposes no per-control
+  delay, so the plugin can't make its own tooltip slower or faster; raise that setting if 0.5s feels
+  too eager, knowing it applies to every tooltip in the editor (and to your game when it runs).
 - The bundled `Geist` font is licensed under the **SIL Open Font License**; see `fonts/OFL.txt`.
 
 ## 🤖 AI Disclosure
