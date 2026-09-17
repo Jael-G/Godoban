@@ -17,3 +17,6 @@ Thumbs.db
 # Claude Code local state.
 .claude/
 CLAUDE.md
+
+# Local screenshot tooling — not part of the installable plugin.
+tools/
