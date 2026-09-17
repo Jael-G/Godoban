@@ -68,6 +68,12 @@ var _save_btn: Button
 var _delete_btn: Button
 var _calendar: Calendar
 var _confirm: PopupPanel
+## The confirmation's message label and the task it is asking about. One popup is reused by both
+## ways in — the editor's own Delete button and a card's context menu (`confirm_delete`) — so
+## which task it is about is carried here. It can't be read off `editing_id` at confirm time:
+## that field survives the editor closing and would name whatever was edited last.
+var _confirm_msg: Label
+var _confirm_pending := ""
 ## The palette this popup's chrome was colored from, as of the last build. See `T.chrome_sig()`.
 var _baked_sig := 0
 
@@ -482,13 +488,13 @@ func _build_confirm() -> void:
 	title_msg.text = "Delete task"
 	title_msg.add_theme_font_size_override("font_size", 18)
 	cv.add_child(title_msg)
-	var msg := Label.new()
-	msg.text = "Delete this task? This cannot be undone."
-	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	msg.add_theme_font_size_override("font_size", 14)
-	msg.add_theme_color_override("font_color", T.TEXT_DIM())
-	msg.custom_minimum_size.x = 380
-	cv.add_child(msg)
+	# Wording and all set per confirm, in `_ask_delete` — the popup outlives any one task.
+	_confirm_msg = Label.new()
+	_confirm_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_confirm_msg.add_theme_font_size_override("font_size", 14)
+	_confirm_msg.add_theme_color_override("font_color", T.TEXT_DIM())
+	_confirm_msg.custom_minimum_size.x = 380
+	cv.add_child(_confirm_msg)
 	var crow := HBoxContainer.new()
 	crow.add_theme_constant_override("separation", 8)
 	var csc := Control.new()
@@ -925,14 +931,44 @@ func _save() -> void:
 
 
 func _delete() -> void:
-	if editing_id == "":
+	confirm_delete(editing_id)
+
+
+## Ask before deleting `task_id`, with the popup the Delete button raises. Public because a card's
+## context menu deletes through here too, so the board gets the same confirmation rather than a
+## second one built for it. A task that isn't there (a stale id) just does nothing.
+##
+## No editor needs to be open, and none is opened: the confirmation is a `PopupPanel`, i.e. a
+## `Window` of its own, and a window whose parent Control is hidden still shows and still takes
+## input. (`task_editor.visible` staying false is what keeps this from flashing the editor open
+## and shut.) A window is also what survives the delete: confirming one frees the card that asked,
+## and this popup belongs to the editor, not to that card.
+func confirm_delete(task_id: String) -> void:
+	var task = store.board.get_task(task_id)
+	if task == null:
 		return
+	_confirm_pending = task_id
+	# This popup is built once and then re-shown, so a palette switch since would show it in the
+	# old colors — the same check `open_edit` / `open_new` make on their way in.
+	_ensure_fresh()
+	# Named, like the epics and tags confirms: one popup asks about whichever task was picked, and
+	# on the card-menu path there is no editor behind it to say which one that was.
+	_confirm_msg.text = "Delete \"%s\"? This cannot be undone." % task.title
 	_confirm.popup_centered()
 
 
 func _do_delete() -> void:
 	_confirm.hide()
-	store.delete_task(editing_id)
+	var id := _confirm_pending
+	_confirm_pending = ""
+	if id == "":
+		return
+	store.delete_task(id)
+	if id != editing_id:
+		# A task this editor was never holding (the card menu's path). The editor isn't up and no
+		# edit is staged, so there is nothing to tear down — and `hide()` / `closed` would only
+		# be lying about what happened.
+		return
 	# The task that carried them is gone, so anything this session created for it is now unused —
 	# the same leftover a cancel would leave behind.
 	_discard_created_tags()

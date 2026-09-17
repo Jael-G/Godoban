@@ -19,6 +19,10 @@ const FIT_MAX_CARDS := 3
 const CONTENT_TOLERANCE := 24.0
 
 signal open_requested(task_id: String)
+## A card asked for its context menu, at a viewport position. Forwarded, like `open_requested`:
+## the column's cards are built and freed here, so a card can't own anything that has to outlive
+## the rebuild its own menu entry causes.
+signal context_requested(task_id: String, at: Vector2)
 signal add_requested(status: String)
 ## Fired when the user toggles the collapse arrow (board columns only). Carries
 ## the target status and the *new* collapsed state (true = collapse to a pill).
@@ -403,6 +407,7 @@ func set_tasks(tasks: Array) -> void:
 			# back to their 220px floor (and the row scrollbar) when they exceed it.
 			card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.open_requested.connect(func(id): open_requested.emit(id))
+		card.context_requested.connect(func(id, at): context_requested.emit(id, at))
 		_cards_container.add_child(card)
 	# drop-zone padding so empty rows stay droppable
 	var pad := Control.new()

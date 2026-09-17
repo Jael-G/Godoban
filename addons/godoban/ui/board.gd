@@ -4,11 +4,15 @@ extends VBoxContainer
 ## The board area. Renders a single 5-column board in "all" mode, or one
 ## compact board per epic in "epic" mode. Rebuilds on store.changed.
 
+const Card = preload("res://addons/godoban/ui/card.gd")
 const Column = preload("res://addons/godoban/ui/column.gd")
 const Model = preload("res://addons/godoban/data/godoban_model.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 
 signal open_requested(task_id: String)
+## A card asked for its context menu, at a viewport position (see `card.gd`). Forwarded to the
+## main screen, which owns the overlays — and the menu itself is one.
+signal context_requested(task_id: String, at: Vector2)
 signal add_requested(status: String)
 
 ## Columns are equal-width no matter how much content each holds: every column
@@ -47,6 +51,33 @@ func set_filters(f: Dictionary) -> void:
 func _on_changed() -> void:
 	_rebuild()
 
+## The id of the task card whose rect covers `at` — a point in *viewport* pixels — or `""` when the
+## point is between cards (a column gutter, the empty space under a short column, the margin).
+##
+## Asked by `godoban_main_screen._move_card_menu_to_pointer` and `_on_card_menu_hidden`: the right-click
+## that should move a card's context menu to another card is one the card itself may never hear about
+## (see those functions), so the menu finds the card by geometry instead of by asking it. Geometry is
+## also what keeps this layout-agnostic: it needs no special case for the two orientations or for the
+## per-epic board, where the same cards are grouped differently.
+func card_at(at: Vector2) -> String:
+	for card in _cards():
+		if card.get_global_rect().has_point(at):
+			return card.task.id
+	return ""
+
+## Every `Card` in the tree, in no particular order. Recursive because the board's shape above the
+## cards varies — a status column, an epic section, a compact board — and only the cards themselves
+## are common to all of them. `Card` is the sole marker that works: a `Card` node is always a real
+## task (the drop hint is a reference to an existing card, not one of its own).
+func _cards(under: Node = null) -> Array:
+	var found := []
+	for child in (under if under != null else self).get_children():
+		if child is Card:
+			found.append(child)
+		else:
+			found.append_array(_cards(child))
+	return found
+
 func _rebuild() -> void:
 	for c in get_children():
 		c.free()
@@ -79,6 +110,7 @@ func _build_board() -> void:
 		col.collapsed = _collapsed_statuses.get(status, false)
 		col.setup(store, status)
 		col.open_requested.connect(func(id): open_requested.emit(id))
+		col.context_requested.connect(func(id, at): context_requested.emit(id, at))
 		col.add_requested.connect(func(s): add_requested.emit(s))
 		col.collapse_toggled.connect(func(s, c):
 			_collapsed_statuses[s] = c
@@ -164,6 +196,7 @@ func _compact_board(key: String, title: String, color: Color, task_ids: Array) -
 		col.fit = true
 		col.setup(store, status)
 		col.open_requested.connect(func(id): open_requested.emit(id))
+		col.context_requested.connect(func(id, at): context_requested.emit(id, at))
 		col.add_requested.connect(func(s): add_requested.emit(s))
 		row.add_child(col)
 		cols[status] = col

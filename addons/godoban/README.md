@@ -64,6 +64,8 @@ dependency, so nothing ships in your exported game.
 - **Descriptions** — multi-line notes on each task; a card whose preview trims them keeps the rest
   in a hover tooltip.
 - **Click to edit** — any card opens in a modal popup over the board; each column has its own "＋".
+- **Right-click a card** — a context menu offers **Edit** or **Delete** without opening the card
+  first; Delete asks for confirmation, naming the task.
 
 **Epics**
 - Lightweight, color-coded groups of related tasks (a name and a color).

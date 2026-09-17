@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.8.0] - 2026-09-15
+
+### Added
+
+- **Right-clicking a card opens a context menu — Edit or Delete — without reading the task first.**
+  Edit opens the task editor on that card; Delete asks for confirmation, naming the task it is about,
+  and deletes it whether or not the editor was ever opened on it.
+
+
 ## [1.7.0] - 2026-09-14
 
 ### Added

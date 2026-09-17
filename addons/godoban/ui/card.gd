@@ -19,6 +19,13 @@ const TOOLTIP_WIDTH := 320
 const TOOLTIP_LINES := 12
 
 signal open_requested(task_id: String)
+## Right-click: the card's context menu was asked for, at `at` — the pointer's position in
+## viewport pixels, which is the space a `PopupMenu` places itself in, embedded or not (see
+## `godoban_main_screen._open_card_menu`). The card doesn't own that menu: it reports the
+## request and lets the screen, which owns every overlay, put it up. That right-press is only
+## half of the gesture, though: moving an already-open menu from one card to another is a click
+## the card never hears, and the screen picks it up on its own (`godoban_main_screen._input`).
+signal context_requested(task_id: String, at: Vector2)
 
 var store: RefCounted
 var task: Model.Task
@@ -269,8 +276,17 @@ func _make_custom_tooltip(_for_text: String) -> Control:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+	if not (event is InputEventMouseButton):
+		return
+	if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		open_requested.emit(task.id)
+	elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		# This asks the viewport rather than reading `event.position`: the engine hands a
+		# `_gui_input` event already localized to the control it's going to, and the menu wants
+		# viewport pixels. Right-click can't collide with dragging either — the engine only starts
+		# a drag from a motion whose button mask holds LEFT, so this never reaches
+		# `_get_drag_data` (which would put a drag preview up instead of a menu).
+		context_requested.emit(task.id, get_viewport().get_mouse_position())
 
 
 func _can_drop_data(_at: Vector2, data) -> bool:

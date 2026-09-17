@@ -23,6 +23,11 @@ const I = preload("res://addons/godoban/ui/icons.gd")
 ## chip shares the bar with the view tabs, so its width is a budget, not a preference.
 const CHIP_NAME_MAX_CHARS := 20
 
+## Entries of a card's context menu (`_open_card_menu`). Ids rather than item indices, so the
+## handler and the menu don't have to agree on an order.
+const MENU_EDIT := 0
+const MENU_DELETE := 1
+
 var store: GodobanStore
 var board: Board
 var editor: TaskEditor
@@ -49,6 +54,23 @@ var _tabs: Dictionary = {}
 var _content: Control
 var _empty_state: Control
 var _active_tab := "board"
+## The card context menu that is up, or `null` when none is — never more than one at a time. Its
+## counterpart `_card_menu_task` is the task it is *for*, which is what tells a right-click on the
+## card the menu is already on from a right-click somewhere else. It outlives the menu (a dismissed
+## menu still has to say which card it was about — see `_move_card_menu_to`), so it is only ever
+## rewritten by `_open_card_menu`.
+var _card_menu: PopupMenu = null
+var _card_menu_task := ""
+## A card menu was taken down and the click that took it down has not been accounted for yet: armed
+## in `_on_card_menu_hidden`, disarmed by any right-press we see. A right-release that arrives while
+## it is armed is the tail of that very click — see `_input`, which is where the editor's default,
+## windowed popups leave us no other half of it to work with.
+var _menu_dismissed := false
+## Right-button state as of the end of the last frame, and whether a card menu was up then. `_process`
+## reads the situation as it was a frame ago rather than from the live objects, which at that moment
+## may already be mid-collapse at the hand of the press it is reacting to.
+var _right_was_down := false
+var _card_menu_was_up := false
 
 func _ready() -> void:
 	store = GodobanStore.new()
@@ -57,6 +79,11 @@ func _ready() -> void:
 	theme = T.theme()
 	_build_ui()
 	_build_overlays()
+	# `_process` and `_input` are what move the card menu between cards, and they have to be watching
+	# before the first right-click rather than woken by it. Both start on: the node is alive for as
+	# long as the tab is.
+	set_process(true)
+	set_process_input(true)
 
 
 ## Builds the task view, the task editor + dialogs once; they persist across chrome rebuilds so an
@@ -156,6 +183,134 @@ func _notification(what: int) -> void:
 		call_deferred("_rebuild_chrome")
 
 
+## Watches for the right-click that lands while a card menu is up, so one click is enough to move the
+## menu to the card that click was aimed at — no click spent dismissing the open one first.
+##
+## The click that *opens* a card menu is the card's own (`card.gd` -> `board.gd` -> `_open_card_menu`);
+## the click that should move it is one the card usually never hears about, because the open menu is a
+## popup and a popup owns the pointer. What is left of that click to work with depends on *Single
+## Window Mode*, and both cases are read here (each verified against the editor on Godot 4.7, with real
+## clicks on a card while another card's menu was up):
+##
+## * **On** — the popup embeds, as popups always do in a game. It takes the viewport's subwindow focus,
+##   `viewport.cpp` `_sub_windows_forward_input` hands it the pointer events and returns, and the card
+##   is never asked — but the press does reach `Input`, so the poll below sees it while the menu is
+##   still up, closes the menu, and `_on_card_menu_hidden` opens its replacement.
+## * **Off** — the default, and a real OS window with the pointer grabbed. The press reaches neither
+##   the card nor `Input` (and by the time Godot lets the grab go the button is up again), so the
+##   *release* — replayed to the window under the pointer once the menu is gone — is the only half of
+##   the click that arrives, and `_input` takes it.
+##
+## Either way the move itself is `_move_card_menu_to`, which is idempotent on purpose: both paths can
+## see the same click, in either order, and one menu is still all that is left standing.
+func _process(_delta: float) -> void:
+	var down := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	if down and not _right_was_down:
+		_move_card_menu_from_polled_press()
+	_right_was_down = down
+	# Recorded last, so it describes the end of the frame — what the *next* frame's press finds in
+	# front of it. Cheap enough to keep as a bool: this runs on every frame of the editor's life.
+	_card_menu_was_up = is_instance_valid(_card_menu) and _card_menu.visible
+
+
+## The embedded popup's half of the gesture (see `_process`): a right-press the menu swallowed before
+## the card could see it, landing — or not — on the menu itself.
+func _move_card_menu_from_polled_press() -> void:
+	# No menu for the click to have landed on: it was an ordinary first right-click on a card, whose
+	# own `_open_card_menu` is already running by the time this frame's `_process` gets here. Reading
+	# last frame's state rather than this one is what makes that true.
+	if not _card_menu_was_up or not is_instance_valid(_card_menu) or not _card_menu.visible:
+		return
+	var at := get_viewport().get_mouse_position()
+	# A press on the menu itself is the menu's business — it stays up, as it should. Measured against
+	# the whole window rect rather than the panel's: the sliver between the two is the panel's shadow,
+	# and a click landing there closes the menu with nothing in its place, which is what a click on a
+	# menu's edge should do anyway.
+	if Rect2(Vector2(_card_menu.position), Vector2(_card_menu.size)).has_point(at):
+		return
+	# The menu opens at the pointer, which is over the card it is for, so "the card under the pointer
+	# is the one this menu belongs to" is another way of saying the pointer never left it.
+	if board.card_at(at) == _card_menu_task:
+		return
+	_card_menu.hide()
+
+
+## The windowed popup's half of the gesture (see `_process`): of the click that dismissed the menu,
+## only the release reaches this window, and it is the one thing left that says where that click was
+## aimed — the card it should have opened for.
+##
+## A right-press we can see is a press a card can see, so it cancels the wait outright: that click is
+## the card's to answer, and `_open_card_menu` runs from `card.gd` as usual.
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index != MOUSE_BUTTON_RIGHT:
+		return
+	if mb.pressed:
+		_menu_dismissed = false
+		return
+	# Nothing says this release is the tail of a click that dismissed a card menu — except the menu
+	# having been dismissed (the usual order: the popup goes on the press, this arrives on the release)
+	# or still being up a frame ago, which is the same click arriving ahead of its own dismissal.
+	if not (_menu_dismissed or _card_menu_was_up):
+		return
+	_menu_dismissed = false
+	# `mb.position` is already in viewport pixels, the space `board.card_at` measures in.
+	_move_card_menu_to(mb.position)
+
+
+## A card menu went away — we closed it above, or Godot dismissed it on the click that was meant for
+## another card. Both are the same thing to the click that did it, which is owed a menu for whatever
+## card it landed on: the two paths above collect on that, and this is where the debt is recorded.
+##
+## The embedded case is also served from here, one frame later, because the menu being torn down has to
+## be gone — off screen, unfocused, and out of the viewport's subwindow list — before the next one is
+## built, or the new popup is caught up in the teardown and never appears, which looks exactly like the
+## click having done nothing.
+func _on_card_menu_hidden(menu: PopupMenu, task_id: String) -> void:
+	if is_instance_valid(menu):
+		menu.queue_free()
+	if _card_menu == menu:
+		_card_menu = null
+	# `_card_menu_task` deliberately stays as it was: the menu is gone, but which card it was for is
+	# still what says whether the click that dismissed it asked for that same card back — see
+	# `_move_card_menu_to`.
+	_menu_dismissed = true
+	if not is_inside_tree():
+		return
+	# The button being held is what separates a dismissal by a click from one by ESC or a menu entry
+	# being chosen — a menu chosen from is closed by a left-click, and a menu dismissed by ESC by no
+	# button at all. Only the embedded case ever gets here with the button still down.
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		return
+	# Held as of the click, not re-read a frame later: this is where the press landed.
+	var at := get_viewport().get_mouse_position()
+	await get_tree().process_frame
+	if not is_inside_tree() or not _menu_dismissed:
+		return
+	_menu_dismissed = false
+	_move_card_menu_to(at)
+
+
+## Puts the card menu on the card at `at` — a point in viewport pixels — replacing whatever card menu
+## is up. Nothing happens when the click asked for the card whose menu it just dismissed (a dismissal
+## and little more, which is what a right-click on the same card does everywhere else) or for no card
+## at all (a column gutter, the space below a short column, the margin).
+##
+## Idempotent, and deliberately so: the polled and the windowed halves of one click can both end up
+## here, in either order, and the checks below are what leave exactly one menu standing.
+func _move_card_menu_to(at: Vector2) -> void:
+	var task_id := board.card_at(at)
+	if task_id == "" or task_id == _card_menu_task:
+		return
+	# The card heard the click after all and opened its own menu (`board.gd` -> `_open_card_menu`):
+	# nothing to move, and opening a second one here would fight it.
+	if is_instance_valid(_card_menu) and _card_menu.visible:
+		return
+	_open_card_menu(task_id, at)
+
+
 func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.color = T.BG()
@@ -213,6 +368,7 @@ func _build_ui() -> void:
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	board.setup(store)
 	board.open_requested.connect(_open_task_view)
+	board.context_requested.connect(_open_card_menu)
 	board.add_requested.connect(func(s): _open_editor("", s))
 	scroll.add_child(board)
 
@@ -590,3 +746,59 @@ func _open_task_view(task_id: String) -> void:
 	if task_view == null:
 		return
 	task_view.open(task_id)
+
+
+## A card was right-clicked: offer the two things a card can do to itself, at the pointer.
+##
+## This is Godot's own `PopupMenu` rather than a hand-drawn menu, for everything it already
+## brings: hover highlighting, arrow-key navigation, and dismissal on ESC or a click outside.
+## Two measured details make it fit here. Its chrome is a plain stylebox override, which a
+## `PopupMenu` accepts directly (no `Theme` resource to build, the same `add_theme_stylebox_override`
+## the rest of the UI uses); and as a `Popup` it is borderless with a transparent background, so a
+## rounded panel draws cleanly with the board showing through the corners rather than wedging them
+## the way the opaque `embedded_border` frame did for the modals `modal_overlay.gd` replaced.
+## And `popup(Rect2i)` places a window in *viewport* pixels — measured the same whether the popup
+## ends up embedded or, as in the default editor, a window of its own — which is the space the card
+## reports its right-click in; screen coordinates would put the menu under the wrong point.
+##
+## Built per right-click and freed when it closes, rather than kept around: nothing here holds a
+## palette it was built in, so a theme switch while the menu is shut is a non-issue, and a menu
+## owned by the card would be freed by the very rebuild its own Delete entry triggers.
+func _open_card_menu(task_id: String, at: Vector2) -> void:
+	var menu := PopupMenu.new()
+	# A `Window` keeps its own theme and doesn't inherit this screen's, so hand it the shared one
+	# (Geist) directly; every color still falls through to the editor theme as usual.
+	menu.theme = T.theme()
+	menu.add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER(), 6, 4, 4, 4, 4, 1))
+	# The same lighter-surface hover the cards and the buttons use — accent stays reserved for the
+	# selected/active state (tab buttons, tag chips), which a hovered menu entry is not.
+	menu.add_theme_stylebox_override("hover",
+		T.panel(T.BG_HOVER(), Color(0, 0, 0, 0), 4, 0, 0, 0, 0, 0))
+	menu.add_theme_color_override("font_color", T.TEXT())
+	menu.add_theme_color_override("font_hover_color", T.TEXT())
+	# The glyphs are baked white (`icons.gd`) and a `PopupMenu` has no icon color in its theme, so
+	# each item carries its own tint — the same trick as the flat icon buttons. That per-item
+	# modulate is also the only way to color an entry: it has no per-item text color, so the trash
+	# glyph is what marks Delete as the destructive one.
+	menu.add_icon_item(I.icon("pencil", 14), "Edit", MENU_EDIT)
+	menu.add_icon_item(I.icon("trash-2", 14), "Delete", MENU_DELETE)
+	menu.set_item_icon_modulate(1, T.OVERDUE)
+	menu.id_pressed.connect(func(id: int):
+		if id == MENU_EDIT:
+			editor.open_edit(task_id)
+		elif id == MENU_DELETE:
+			# The editor's own confirmation, raised on a task it isn't holding: see
+			# `task_editor.confirm_delete`.
+			editor.confirm_delete(task_id))
+	# `_on_card_menu_hidden` is where this menu is freed, and where the click that takes it down is
+	# recorded as a click still owed a menu — so the two are one connection, not two.
+	menu.popup_hide.connect(_on_card_menu_hidden.bind(menu, task_id))
+	# The menu this one replaces, if any — the paths that move a menu have usually closed it already
+	# and this finds nothing, but `_move_card_menu_to` is the one caller that can arrive while the menu
+	# it replaces is still up. Either way only one card menu ends up on screen.
+	if is_instance_valid(_card_menu):
+		_card_menu.hide()
+	_card_menu = menu
+	_card_menu_task = task_id
+	add_child(menu)
+	menu.popup(Rect2i(Vector2i(at), Vector2i.ZERO))

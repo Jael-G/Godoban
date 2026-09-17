@@ -119,6 +119,7 @@ Take full control of the project's task list from a familiar, intuitive board.
 | **Due Dates** | Set a due date via a hand-rolled calendar popup (Godot has no built-in one). |
 | **Descriptions** | Multi-line notes on every task, shown in full in the task view — and on hover, for a card whose preview has to trim them. |
 | **Click to View** | Click any card to read it in a modal popup over the board — status, dates, tags and description — with an **Edit** button to change it. Columns have their own "+", which opens the editor directly. |
+| **Right-Click Menu** | Right-click any card for **Edit** or **Delete** without opening it first. Delete asks for confirmation, naming the task. |
 | **Collapsible Columns** | Fold a column to a narrow pill to reclaim space; state survives rebuilds. |
 
 **Where a dropped card lands**
