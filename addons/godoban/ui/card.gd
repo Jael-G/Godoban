@@ -65,7 +65,7 @@ func _build() -> void:
 	top.add_theme_constant_override("separation", 8)
 	v.add_child(top)
 
-	var title := _lines_label(task.title, T.TEXT(), 13, TITLE_LINES)
+	var title := _lines_label(task.title, T.TEXT(), T.fs(13), TITLE_LINES)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
 
@@ -74,7 +74,7 @@ func _build() -> void:
 	top.add_child(badge)
 
 	# Description: dim, smaller, always reserving two lines.
-	var desc := _lines_label(task.description, T.TEXT_DIM(), 10, DESC_LINES)
+	var desc := _lines_label(task.description, T.TEXT_DIM(), T.fs(10), DESC_LINES)
 	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(desc)
 	_desc_label = desc
@@ -135,7 +135,7 @@ func _priority_badge() -> Control:
 	var col := _priority_color()
 	var l := Label.new()
 	l.text = Model.priority_title(task.priority)
-	l.add_theme_font_size_override("font_size", 9)
+	l.add_theme_font_size_override("font_size", T.fs(9))
 	l.add_theme_color_override("font_color", col)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -198,7 +198,7 @@ func _pill(text: String) -> Control:
 func _pill_text(text: String, col: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 9)
+	l.add_theme_font_size_override("font_size", T.fs(9))
 	l.add_theme_color_override("font_color", col)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -214,7 +214,7 @@ func _footer_text(text: String, col: Color, wrap := false) -> Label:
 		# Take the width the card's footer leaves (after the due date) and wrap
 		# inside it, rather than demanding its full text width as a minimum.
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.add_theme_font_size_override("font_size", 9)
+	l.add_theme_font_size_override("font_size", T.fs(9))
 	l.add_theme_color_override("font_color", col)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -271,7 +271,7 @@ func _make_custom_tooltip(_for_text: String) -> Control:
 	body.max_lines_visible = TOOLTIP_LINES
 	body.custom_minimum_size = Vector2(TOOLTIP_WIDTH, 0)
 	body.add_theme_color_override("font_color", T.TEXT())
-	body.add_theme_font_size_override("font_size", 11)
+	body.add_theme_font_size_override("font_size", T.fs(11))
 	return body
 
 

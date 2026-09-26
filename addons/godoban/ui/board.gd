@@ -160,7 +160,7 @@ func _compact_board(key: String, title: String, color: Color, task_ids: Array) -
 	header.add_child(dot)
 	var t := Label.new()
 	t.text = title
-	t.add_theme_font_size_override("font_size", 22)
+	t.add_theme_font_size_override("font_size", T.fs(22))
 	t.add_theme_color_override("font_color", T.TEXT())
 	header.add_child(t)
 
@@ -262,7 +262,7 @@ func _empty_hint(text: String) -> Control:
 	l.text = text
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_color_override("font_color", T.TEXT_DIM())
-	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_font_size_override("font_size", T.fs(14))
 	c.add_child(l)
 	return c
 

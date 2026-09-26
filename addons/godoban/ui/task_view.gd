@@ -128,7 +128,7 @@ func _build_body(parent: VBoxContainer) -> void:
 	_desc = Label.new()
 	_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_desc.add_theme_font_size_override("font_size", 12)
+	_desc.add_theme_font_size_override("font_size", T.fs(12))
 	_desc.add_theme_color_override("font_color", T.TEXT())
 	_desc.add_theme_constant_override("line_spacing", 3)
 	inset.add_child(_desc)
@@ -171,7 +171,7 @@ func _render() -> void:
 		# jump between tasks with and without tags.
 		var none := Label.new()
 		none.text = "No tags"
-		none.add_theme_font_size_override("font_size", 11)
+		none.add_theme_font_size_override("font_size", T.fs(11))
 		none.add_theme_color_override("font_color", T.TEXT_FAINT())
 		_tags.add_child(none)
 	else:
@@ -210,7 +210,7 @@ func _field(icon: String, name: String, value: Control) -> Control:
 	var label := Label.new()
 	label.text = name
 	label.custom_minimum_size.x = FIELD_NAME_W
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", T.fs(12))
 	label.add_theme_color_override("font_color", T.TEXT())
 	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(label)
@@ -230,7 +230,7 @@ func _value(text: String, col: Color) -> Label:
 	l.clip_text = true
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", T.fs(12))
 	l.add_theme_color_override("font_color", col if text != "" else T.TEXT_FAINT())
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
@@ -279,7 +279,7 @@ func _tag_pill(tag: String) -> Control:
 func _pill_label(text: String, col: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_font_size_override("font_size", T.fs(11))
 	l.add_theme_color_override("font_color", col)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -303,7 +303,7 @@ func _section_head(icon: String, text: String) -> Control:
 
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_font_size_override("font_size", T.fs(11))
 	label.add_theme_color_override("font_color", T.TEXT())
 	row.add_child(label)
 	return row

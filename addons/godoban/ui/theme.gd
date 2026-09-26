@@ -7,8 +7,35 @@ extends RefCounted
 ## epic colors stay custom — those are authored for intent, not for theming.
 
 const I = preload("res://addons/godoban/ui/icons.gd")
+const Settings = preload("res://addons/godoban/data/godoban_settings.gd")
 const FONT_PATH := "res://addons/godoban/fonts/geist_variable.ttf"
 static var _theme: Theme
+
+
+# --- type scale -----------------------------------------------------------------
+# Every font size in the plugin is a *design* size: a literal chosen against the base the UI was
+# authored at (`Settings.BASE`), which the user can move. `fs()` restates one of those literals at
+# the base in force, so a literal keeps meaning "a card title" rather than "13 pixels" — without it
+# a font-size setting would reach only the controls inheriting the theme's default, and every
+# explicit override would stay put.
+
+## The base size the UI is drawn at right now.
+static func base_font_size() -> int:
+	return Settings.font_size()
+
+
+## A design font size restated at the current base. The scale is 1.0 at the default, so `fs(13)` is
+## 13 until someone asks for something else.
+static func fs(design_size: int) -> int:
+	return maxi(1, roundi(float(design_size) * float(base_font_size()) / float(Settings.BASE)))
+
+
+## A design *pixel* measure restated at the current base, for the few pieces of geometry that have
+## to track the type they hold — a donut's diameter against the total drawn inside it, a collapsed
+## column's thickness against its rotated title. General layout is deliberately not routed through
+## here: panels and gaps stay in editor pixels, so the UI grows with its text.
+static func px(design_px: float) -> float:
+	return design_px * float(base_font_size()) / float(Settings.BASE)
 
 
 ## Read a color registered under the editor theme's "Editor" type. Guarded so the
@@ -84,7 +111,9 @@ static func ACCENT_TEXT() -> Color:
 ##
 ## XOR of the tokens, so a move in any one of them changes the answer. Semantic colors
 ## (`STATUS_COLORS`, `PRIORITY_COLORS`, `OVERDUE`) are deliberately out: they're authored for
-## intent, not for theming, so they don't move with the theme.
+## intent, not for theming, so they don't move with the theme. The base font size rides along for
+## the same reason the colors are here: every size is baked at build time like a color, so a
+## font-size change has to invalidate a build the way a palette change does.
 static func chrome_sig() -> int:
 	var tokens: Array[Color] = [
 		BG(), BG_PANEL(), BG_INPUT(), BG_HOVER(), BORDER(), BORDER_SOFT(),
@@ -93,7 +122,7 @@ static func chrome_sig() -> int:
 	var sig := 0
 	for c in tokens:
 		sig ^= c.to_rgba32()
-	return sig
+	return sig ^ base_font_size()
 
 
 # Display-only shortening for single-line surfaces whose width must not follow their text
@@ -144,13 +173,17 @@ const OVERDUE := Color("#eb5757")
 ## font_size overrides elsewhere keep working on top. Font-only on purpose: no
 ## colors are set here, so every color still resolves through to the editor theme.
 ## Built lazily + cached.
+##
+## The size is re-read on every call, not just at build time: this is one cached resource shared by
+## everything holding it (the main screen, the card popup), and assigning through the cache is what
+## pushes a new font size to all of them at once.
 static func theme() -> Theme:
 	if _theme == null:
 		_theme = Theme.new()
-		_theme.default_font_size = 13
 		var f := load(FONT_PATH) as FontFile
 		if f != null:
 			_theme.default_font = f
+	_theme.default_font_size = base_font_size()
 	return _theme
 
 

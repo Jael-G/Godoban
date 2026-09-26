@@ -2,6 +2,7 @@
 extends EditorPlugin
 
 const MainScreen = preload("res://addons/godoban/godoban_main_screen.tscn")
+const Settings = preload("res://addons/godoban/data/godoban_settings.gd")
 
 var screen: Control
 
@@ -9,6 +10,8 @@ func _store() -> Variant:
 	return screen.get("store") if screen else null
 
 func _enter_tree() -> void:
+	# Before the main screen is built: it reads the font size as it lays itself out.
+	Settings.register()
 	screen = MainScreen.instantiate()
 	EditorInterface.get_editor_main_screen().add_child(screen)
 	_make_visible(false)

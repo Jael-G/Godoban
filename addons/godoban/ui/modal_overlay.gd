@@ -116,7 +116,7 @@ func _build_header() -> HBoxContainer:
 	heading = Label.new()
 	heading.text = _modal_title()
 	heading.add_theme_font_override("font", T.title_font(0.7, 1.0))
-	heading.add_theme_font_size_override("font_size", 16)
+	heading.add_theme_font_size_override("font_size", T.fs(16))
 	heading.add_theme_color_override("font_color", T.TEXT())
 	heading.visible = heading.text != ""
 	h.add_child(heading)

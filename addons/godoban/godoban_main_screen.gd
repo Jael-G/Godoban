@@ -16,6 +16,8 @@ const FiltersBar = preload("res://addons/godoban/ui/filters_bar.gd")
 const Overview = preload("res://addons/godoban/ui/overview.gd")
 const BoardSwitcher = preload("res://addons/godoban/ui/board_switcher.gd")
 const MessageDialog = preload("res://addons/godoban/ui/message_dialog.gd")
+const SettingsDialog = preload("res://addons/godoban/ui/settings_dialog.gd")
+const Settings = preload("res://addons/godoban/data/godoban_settings.gd")
 const T = preload("res://addons/godoban/ui/theme.gd")
 const I = preload("res://addons/godoban/ui/icons.gd")
 
@@ -37,6 +39,7 @@ var tags_dialog: TagsDialog
 var filters_bar: FiltersBar
 var overview: Overview
 var board_switcher: BoardSwitcher
+var settings_dialog: SettingsDialog
 var _import_dialog: FileDialog
 var _message_box: MessageDialog
 ## Held between `show_message` and the deferred pop, which exists so the popup isn't opened from
@@ -71,12 +74,16 @@ var _menu_dismissed := false
 ## may already be mid-collapse at the hand of the press it is reacting to.
 var _right_was_down := false
 var _card_menu_was_up := false
+## The font size the UI is currently drawn at, so a change can be told from a repeat of one we've
+## already applied — the size reaches us from more than one direction.
+var _applied_font_size := 0
 
 func _ready() -> void:
 	store = GodobanStore.new()
 	store.load()
 	# Apply the shared theme (Geist default font) to the whole tab; children inherit it.
 	theme = T.theme()
+	_applied_font_size = Settings.font_size()
 	_build_ui()
 	_build_overlays()
 	# `_process` and `_input` are what move the card menu between cards, and they have to be watching
@@ -84,12 +91,16 @@ func _ready() -> void:
 	# long as the tab is.
 	set_process(true)
 	set_process_input(true)
+	# Godoban's size sits on top of the editor's, so changing *that* moves every Godoban size too.
+	var es := EditorInterface.get_editor_settings()
+	if es != null and not es.settings_changed.is_connected(_on_editor_settings_changed):
+		es.settings_changed.connect(_on_editor_settings_changed)
 
 
 ## Builds the task view, the task editor + dialogs once; they persist across chrome rebuilds so an
 ## open edit survives a theme change (they restyle themselves instead — see `_rebuild_chrome`).
 ## Added after the chrome so they layer on top, and in this order — each one added later covers the
-## ones before it: editor < view < epics < boards < message.
+## ones before it: editor < view < epics < tags < settings < boards < message.
 func _build_overlays() -> void:
 	if editor != null:
 		return
@@ -118,6 +129,12 @@ func _build_overlays() -> void:
 	tags_dialog.setup(store)
 	add_child(tags_dialog)
 
+	# Below the board switcher, for `owns_escape`'s sake — never up at the same time.
+	settings_dialog = SettingsDialog.new()
+	settings_dialog.setup()
+	add_child(settings_dialog)
+	settings_dialog.font_size_changed.connect(_on_font_size_changed)
+
 	# The import file picker lives here, not inside the popup, so it stays open even
 	# if the popup closes on an outside click mid-selection.
 	_import_dialog = FileDialog.new()
@@ -143,7 +160,8 @@ func _build_overlays() -> void:
 
 
 ## Rebuilds the theme-colored chrome when the editor theme changes. Colors resolve through
-## the editor theme, so re-applying them repaints every surface.
+## the editor theme, so re-applying them repaints every surface. Also the path a font-size change
+## takes, for the same reason: every size is baked at build time exactly like a color.
 ##
 ## The overlays are skipped because they rebuild *themselves* (see
 ## `modal_overlay.rebuild_for_theme` and `task_editor._rebuild_for_theme`), each carrying its own
@@ -151,7 +169,7 @@ func _build_overlays() -> void:
 ## throw that state away, and rebuilding them twice in one frame would be wasted work.
 func _rebuild_chrome() -> void:
 	for c in get_children():
-		if c == editor or c == task_view or c == epic_dialog or c == tags_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
+		if c == editor or c == task_view or c == epic_dialog or c == tags_dialog or c == settings_dialog or c == board_switcher or c == _import_dialog or c == _message_box:
 			continue
 		remove_child(c)
 		c.free()
@@ -169,6 +187,8 @@ func _rebuild_chrome() -> void:
 		move_child(epic_dialog, get_child_count() - 1)
 	if tags_dialog != null:
 		move_child(tags_dialog, get_child_count() - 1)
+	if settings_dialog != null:
+		move_child(settings_dialog, get_child_count() - 1)
 	if board_switcher != null:
 		move_child(board_switcher, get_child_count() - 1)
 	if _message_box != null:
@@ -399,7 +419,7 @@ func _build_empty_state() -> Control:
 	label.text = "No board yet.\nClick the board chip above to create or import one."
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_color_override("font_color", T.TEXT_DIM())
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", T.fs(14))
 	center.add_child(label)
 	return center
 
@@ -532,7 +552,69 @@ func _build_tab_bar() -> Control:
 
 	_tabs["board"] = _add_tab(h, "Board")
 	_tabs["overview"] = _add_tab(h, "Overview")
+
+	# The spacer holds settings at the far right of the bar. On the bar rather than in the toolbar
+	# below, which is hidden with the content when no board is loaded — settings must stay reachable
+	# from the empty state.
+	var slack := Control.new()
+	slack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(slack)
+
+	var settings_btn := Button.new()
+	# Larger than the toolbar's other glyphs (16): the only lone icon in the bar, with no label to
+	# carry its meaning.
+	settings_btn.icon = I.icon("settings", 36)
+	settings_btn.flat = true
+	settings_btn.tooltip_text = "Settings"
+	settings_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	T.flat_button(settings_btn)
+	for s in ["icon_normal_color", "icon_pressed_color", "icon_focus_color"]:
+		settings_btn.add_theme_color_override(s, T.TEXT_DIM())
+	settings_btn.add_theme_color_override("icon_hover_color", T.TEXT())
+	settings_btn.pressed.connect(_open_settings)
+	h.add_child(settings_btn)
+
 	return bar
+
+
+func _open_settings() -> void:
+	if settings_dialog == null:
+		return
+	settings_dialog.open()
+
+
+
+
+## The stepper moved. Deferred: the signal comes from a button in that dialog, and applying the
+## change rebuilds it — freeing the button mid-`pressed`.
+func _on_font_size_changed() -> void:
+	_apply_font_size.call_deferred()
+
+
+## The editor's own font size moved — the size every Godoban size is measured from. The editor
+## emits this for every setting it has, so only a move that changes our size is worth a rebuild.
+func _on_editor_settings_changed() -> void:
+	if Settings.font_size() != _applied_font_size:
+		_apply_font_size.call_deferred()
+
+
+## Restate the whole plugin at the size now in force.
+##
+## Two halves, because the UI is built two ways: the chrome is thrown away and rebuilt (it bakes
+## every size as it goes), while each overlay restyles itself through `rebuild_for_theme`, which now
+## sees a changed `chrome_sig` — carrying whatever the user had open across, as for a theme switch.
+func _apply_font_size() -> void:
+	# More than one route in can arrive for one change, so the size already in force is what tells a
+	# repeat from a move — and what collapses a burst of calls into one rebuild.
+	if Settings.font_size() == _applied_font_size:
+		return
+	_applied_font_size = Settings.font_size()
+	# Through the cache: one resource, shared with the card menu's `PopupMenu`.
+	T.theme()
+	_rebuild_chrome()
+	for o in [editor, task_view, epic_dialog, tags_dialog, settings_dialog, board_switcher, _message_box]:
+		if o != null and o.has_method("rebuild_for_theme"):
+			o.rebuild_for_theme()
 
 
 ## A clickable chip showing the current board's name with a chevron hint + hover
@@ -573,7 +655,7 @@ func _build_board_chip() -> Control:
 
 	_chip_name_label = Label.new()
 	_set_chip_name()
-	_chip_name_label.add_theme_font_size_override("font_size", 16)
+	_chip_name_label.add_theme_font_size_override("font_size", T.fs(16))
 	_chip_name_label.add_theme_font_override("font", T.title_font(0.7, 1.0))
 	_chip_name_label.add_theme_color_override("font_color", T.TEXT())
 	_chip_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -597,7 +679,7 @@ func _add_tab(parent: Control, text: String) -> Button:
 	b.text = text
 	b.toggle_mode = true
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	b.add_theme_font_size_override("font_size", 13)
+	b.add_theme_font_size_override("font_size", T.fs(13))
 	b.toggled.connect(func(_on): _switch_tab(text.to_lower()))
 	parent.add_child(b)
 	return b

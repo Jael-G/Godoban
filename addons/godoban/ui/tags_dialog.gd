@@ -94,7 +94,7 @@ func _build_body(v: VBoxContainer) -> void:
 	var sub := Label.new()
 	sub.text = "Create, edit, and organize tags used across your tasks."
 	sub.add_theme_color_override("font_color", T.TEXT_DIM())
-	sub.add_theme_font_size_override("font_size", 12)
+	sub.add_theme_font_size_override("font_size", T.fs(12))
 	v.add_child(sub)
 
 	v.add_child(_build_search_row())
@@ -126,7 +126,7 @@ func _build_search_row() -> Control:
 	row.add_child(field)
 
 	_count = Label.new()
-	_count.add_theme_font_size_override("font_size", 11)
+	_count.add_theme_font_size_override("font_size", T.fs(11))
 	_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	# Width reserved so the field doesn't twitch as the count goes from one digit to two.
@@ -304,7 +304,7 @@ func _refresh_create_row() -> void:
 	var b := Button.new()
 	b.flat = true
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.add_theme_font_size_override("font_size", 12)
+	b.add_theme_font_size_override("font_size", T.fs(12))
 	T.flat_button(b)
 	b.add_theme_color_override("font_color", T.ACCENT())
 	# Shows the name as it will be stored, so the cap is visible where it applies.
@@ -389,7 +389,7 @@ func _build_row(name: String) -> Control:
 	var n: int = store.tag_usage(name)
 	usage.text = "%d %s" % [n, "task" if n == 1 else "tasks"]
 	usage.add_theme_color_override("font_color", T.TEXT_FAINT())
-	usage.add_theme_font_size_override("font_size", 12)
+	usage.add_theme_font_size_override("font_size", T.fs(12))
 	usage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	usage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(usage)
@@ -425,7 +425,7 @@ func _build_row(name: String) -> Control:
 
 	# Why a rename was refused, in the user's terms, under the field that was refused.
 	var err := Label.new()
-	err.add_theme_font_size_override("font_size", 11)
+	err.add_theme_font_size_override("font_size", T.fs(11))
 	err.add_theme_color_override("font_color", T.OVERDUE)
 	err.visible = false
 	err.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -528,11 +528,11 @@ func _build_confirm() -> void:
 	_confirm.add_child(cv)
 	var title_msg := Label.new()
 	title_msg.text = "Delete tag"
-	title_msg.add_theme_font_size_override("font_size", 18)
+	title_msg.add_theme_font_size_override("font_size", T.fs(18))
 	cv.add_child(title_msg)
 	_confirm_msg = Label.new()
 	_confirm_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_confirm_msg.add_theme_font_size_override("font_size", 14)
+	_confirm_msg.add_theme_font_size_override("font_size", T.fs(14))
 	_confirm_msg.add_theme_color_override("font_color", T.TEXT_DIM())
 	_confirm_msg.custom_minimum_size.x = 360
 	cv.add_child(_confirm_msg)

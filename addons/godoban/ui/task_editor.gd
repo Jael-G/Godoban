@@ -235,7 +235,7 @@ func _build_header() -> Control:
 	_head_title = Label.new()
 	_head_title.text = "New Task"
 	_head_title.add_theme_font_override("font", T.title_font(0.7, 1.0))
-	_head_title.add_theme_font_size_override("font_size", 16)
+	_head_title.add_theme_font_size_override("font_size", T.fs(16))
 	_head_title.add_theme_color_override("font_color", T.TEXT())
 	_header.add_child(_head_title)
 
@@ -366,7 +366,7 @@ func _build_tag_picker() -> Control:
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search_row.add_child(field)
 	_tag_count = Label.new()
-	_tag_count.add_theme_font_size_override("font_size", 11)
+	_tag_count.add_theme_font_size_override("font_size", T.fs(11))
 	_tag_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_tag_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	# Width reserved so the field doesn't twitch as the count goes from one digit to two.
@@ -391,7 +391,7 @@ func _build_tag_picker() -> Control:
 	_create_row.flat = true
 	_create_row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_create_row.visible = false
-	_create_row.add_theme_font_size_override("font_size", 12)
+	_create_row.add_theme_font_size_override("font_size", T.fs(12))
 	T.flat_button(_create_row)
 	_create_row.add_theme_color_override("font_color", T.ACCENT())
 	_create_row.pressed.connect(_commit_tag_query)
@@ -486,12 +486,12 @@ func _build_confirm() -> void:
 	_confirm.add_child(cv)
 	var title_msg := Label.new()
 	title_msg.text = "Delete task"
-	title_msg.add_theme_font_size_override("font_size", 18)
+	title_msg.add_theme_font_size_override("font_size", T.fs(18))
 	cv.add_child(title_msg)
 	# Wording and all set per confirm, in `_ask_delete` — the popup outlives any one task.
 	_confirm_msg = Label.new()
 	_confirm_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_confirm_msg.add_theme_font_size_override("font_size", 14)
+	_confirm_msg.add_theme_font_size_override("font_size", T.fs(14))
 	_confirm_msg.add_theme_color_override("font_color", T.TEXT_DIM())
 	_confirm_msg.custom_minimum_size.x = 380
 	cv.add_child(_confirm_msg)
@@ -520,7 +520,7 @@ func _label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_color_override("font_color", T.TEXT())
-	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_font_size_override("font_size", T.fs(11))
 	return l
 
 
@@ -728,7 +728,7 @@ func _build_chip(tag: String) -> Control:
 	var l := Label.new()
 	# Only bites on a tag predating MAX_TAG_LEN; the tooltip below keeps the full text reachable.
 	l.text = Model.tag_label(tag)
-	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_font_size_override("font_size", T.fs(11))
 	l.add_theme_color_override("font_color", txt)
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if l.text != tag:
@@ -861,7 +861,7 @@ func _build_tag_row(tag: String) -> Button:
 	b.clip_text = true
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.add_theme_font_size_override("font_size", 12)
+	b.add_theme_font_size_override("font_size", T.fs(12))
 	# Empty focus style: a focus ring over the selected surface reads as a second selection.
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	# Stadium pills (radius 14 against the row's ~30px height) with a surface in both states, so
