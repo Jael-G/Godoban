@@ -36,6 +36,18 @@
 >   → **Import board** and point at your previous JSON (wherever you kept it, including a
 >   `res://godoban_data.json` at the project root).
 
+> [!IMPORTANT]
+> **Settings menu and Ko-fi!!** 
+>
+> I'm currently working on a settings menu to fix some of the bugs that
+> have been mentioned (like fonts). However, due to my own professional developer life, I am unable to post as much
+> as I was before. So hang in there! Hopefully I will be able to role it out between this weekend and the next.
+>
+> I'm also planning on opening a Ko-fi (not sure yet). Of course, donations are entirely optional, and please don't feel any pressure to contribute!
+> Simply using and enjoying the project and giving feedback is already more than enough support.
+> However, for those who do choose to donate, I would be incredibly grateful, as it would help me dedicate more time to developing and improving the project.
+>
+> Thank you all for your continued support and patience!
 
 ---
 
