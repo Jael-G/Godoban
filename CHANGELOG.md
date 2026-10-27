@@ -3,6 +3,45 @@
 All notable changes to this project will be documented in this file.
 
 
+## [Unreleased]
+
+### Added
+
+- **A settings dialog holds the plugin's font size, opened from a cog at the right of the tab bar.**
+  Its **−** and **+** buttons resize every surface as they are clicked: the board behind the dialog
+  is rebuilt on the press, so the board itself is the preview — a size can be judged without closing
+  the panel and coming back.
+
+- **The default is Godot's own font size.** The stepper is centred on the size the editor is
+  *drawing* at — not the raw font-size setting, but the editor theme's resolved size, which has the
+  interface display scale folded in (28 rather than 14 on a Retina display at scale 2.0). An
+  untouched install therefore matches the editor's own UI text, and **−** / **+** walk ten pixels
+  either side of that.
+
+- **Godoban follows the editor's font size.** The centre is read live rather than snapshotted, so
+  *Editor Settings → Interface → Editor → Font Size* moves every Godoban size with it — no reload,
+  and no second place to set it.
+
+### Changed
+
+- **Every font size in the plugin is now expressed against one scale rather than hard-coded.**
+  This is what lets one setting move all of it: the ~65 literals that were baked into the UI are
+  restated at the base in force. The few pieces of geometry that have to track the type they hold —
+  a collapsed column pill, the donut's diameter around the total drawn inside it, the vertical bars'
+  label bands — scale with it; general layout (panel padding, column widths, icon sizes)
+  deliberately does not.
+
+### Notes
+
+- The size is stored in Editor Settings under `godoban/settings/font_offset` — the stepper's
+  distance from the centre, not an absolute size — so it is per-editor, never committed, and keeps
+  its meaning if the editor's own font size changes.
+- Icons, borders and spacing stay in editor pixels at every size, so the stepper's own glyphs stay
+  14px while the number beside them grows. At the largest settings the board also reads denser and
+  scrolls horizontally sooner than it would otherwise, because the type outgrows the fixed column
+  widths before the layout gives way.
+
+
 ## [1.8.0] - 2026-09-15
 
 ### Added

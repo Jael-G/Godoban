@@ -240,6 +240,11 @@ The board matches your editor theme, so it looks like it belongs right in the ed
 |---|---|
 | **Matches the Editor** | Colors follow your current editor theme — dark or light. |
 | **Auto-Updates** | The palette re-syncs on every theme change. |
+| **Settings Dialog** | A cog at the right of the tab bar opens the plugin's settings. The board behind it is the preview — it resizes as you click. |
+| **Font Size** | **−** and **+** resize every surface as you click them — the board behind the dialog rebuilds on the press, so you can judge a size without closing the panel. |
+| **Centred on Godot** | The default is the size the editor is *drawing* at — not the raw setting — so an untouched install matches the editor's own UI text, display scaling and all. |
+| **Follows the Editor** | The centre is read live, not snapshotted: changing *Editor Settings → Interface → Editor → Font Size* moves every Godoban size with it. |
+| **Saved per Editor** | The offset lives in Editor Settings (`godoban/settings/font_offset`), not in the project — so one person's text size never rides along in anyone else's commits. |
 
 </details>
 

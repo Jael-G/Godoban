@@ -113,13 +113,13 @@ func _build() -> void:
 
 	var title := Label.new()
 	title.text = Model.status_title(status)
-	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_font_size_override("font_size", T.fs(14))
 	title.add_theme_color_override("font_color", T.TEXT())
 	header.add_child(title)
 
 	_count_label = Label.new()
 	_count_label.text = "0"
-	_count_label.add_theme_font_size_override("font_size", 11)
+	_count_label.add_theme_font_size_override("font_size", T.fs(11))
 	_count_label.add_theme_color_override("font_color", T.TEXT_DIM())
 	_count_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -135,7 +135,7 @@ func _build() -> void:
 	add.tooltip_text = "Add task to %s" % Model.status_title(status)
 	T.flat_button(add)
 	add.add_theme_color_override("font_color", T.TEXT_DIM())
-	add.add_theme_font_size_override("font_size", 18)
+	add.add_theme_font_size_override("font_size", T.fs(18))
 	add.pressed.connect(func(): add_requested.emit(status))
 	header.add_child(add)
 
@@ -202,7 +202,7 @@ func _build() -> void:
 	empty_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	empty_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	empty_hint.add_theme_color_override("font_color", T.TEXT_FAINT())
-	empty_hint.add_theme_font_size_override("font_size", 13)
+	empty_hint.add_theme_font_size_override("font_size", T.fs(13))
 
 	_center = CenterContainer.new()
 	_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -249,12 +249,14 @@ func _build_collapsed() -> void:
 		_build_collapsed_pill()
 
 
-## Collapsed vertical orientation: a narrow 32px-wide pill spanning the full
+## Collapsed vertical orientation: a narrow pill (32px at the default type scale) spanning the full
 ## height. The status dot, title and count are rotated to read bottom-to-top
 ## (dot, title, count from the bottom), so the whole column folds into a sliver.
 func _build_collapsed_pill() -> void:
-	custom_minimum_size.x = 32
-	custom_maximum_size.x = 32
+	# Tracks the type scale: the title is rotated into this sliver, so the pill must be as thick as
+	# the glyph box it holds. `board.gd`'s `_equalize` reads the minimum back, so the lane widens too.
+	custom_minimum_size.x = T.px(32)
+	custom_maximum_size.x = T.px(32)
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_stylebox_override("panel", T.panel(T.BG_PANEL(), T.BORDER_SOFT(), 8, 6, 6, 8, 8, 1))
@@ -280,11 +282,11 @@ func _build_collapsed_pill() -> void:
 	# the bottom up gives: bullet, title, count (title + count run bottom-to-top).
 	# The count is rotated to match the title. Keep `_count_label` pointing at the
 	# enclosed Label so set_tasks() can still update it.
-	var count_cell := _vertical_label("0", 11, T.TEXT_DIM())
+	var count_cell := _vertical_label("0", T.fs(11), T.TEXT_DIM())
 	_count_label = count_cell.get_child(0) as Label
 	inner.add_child(count_cell)
 
-	var t := _vertical_label(Model.status_title(status), 14, T.TEXT())
+	var t := _vertical_label(Model.status_title(status), T.fs(14), T.TEXT())
 	inner.add_child(t)
 
 	var dot := _status_dot()
@@ -323,14 +325,14 @@ func _build_collapsed_row() -> void:
 
 	var title := Label.new()
 	title.text = Model.status_title(status)
-	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_font_size_override("font_size", T.fs(14))
 	title.add_theme_color_override("font_color", T.TEXT())
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_child(title)
 
 	_count_label = Label.new()
 	_count_label.text = "0"
-	_count_label.add_theme_font_size_override("font_size", 11)
+	_count_label.add_theme_font_size_override("font_size", T.fs(11))
 	_count_label.add_theme_color_override("font_color", T.TEXT_DIM())
 	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_child(_count_label)

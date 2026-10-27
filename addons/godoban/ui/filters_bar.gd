@@ -44,13 +44,13 @@ func _build() -> void:
 	_search.placeholder_text = "Search tasks…"
 	_search.clear_button_enabled = true
 	_search.custom_minimum_size.x = 220
-	_search.add_theme_font_size_override("font_size", 13)
+	_search.add_theme_font_size_override("font_size", T.fs(13))
 	T.field(_search)
 	_search.text_changed.connect(func(_s): _emit())
 	add_child(_search)
 
 	_sort = OptionButton.new()
-	_sort.add_theme_font_size_override("font_size", 13)
+	_sort.add_theme_font_size_override("font_size", T.fs(13))
 	T.field(_sort)
 	_sort.item_selected.connect(func(_i): _emit())
 	add_child(_sort)
@@ -85,7 +85,7 @@ func _make_option(text: String) -> OptionButton:
 	var o := OptionButton.new()
 	o.add_item(text)
 	o.set_item_metadata(0, "any")
-	o.add_theme_font_size_override("font_size", 13)
+	o.add_theme_font_size_override("font_size", T.fs(13))
 	T.field(o)
 	o.item_selected.connect(func(_i): _emit())
 	add_child(o)

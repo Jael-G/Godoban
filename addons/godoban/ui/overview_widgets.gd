@@ -44,7 +44,9 @@ class Donut:
 	var font: Font
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(156, 156)
+		# The ring holds a total drawn at 24 design px and a label at 12, so its diameter has to
+		# grow with them or the text outgrows the circle it is centred in.
+		custom_minimum_size = Vector2(T.px(156), T.px(156))
 
 	func _draw() -> void:
 		var c := size * 0.5
@@ -75,9 +77,10 @@ class Donut:
 				draw_arc(c, r, a0, a1, 96, s.color, w, true)
 				acc += span
 
-		# Center: the big total, with a dim label underneath.
-		_center_string(f, c + Vector2(0, 8), str(total), 24, T.TEXT())
-		_center_string(f, c + Vector2(0, 30), center_title, 12, T.TEXT_DIM())
+		# Center: the big total, with a dim label underneath. Both sizes and the offsets that
+		# separate them go through the type scale, so the pair stays one stack at any size.
+		_center_string(f, c + Vector2(0, T.px(8)), str(total), T.fs(24), T.TEXT())
+		_center_string(f, c + Vector2(0, T.px(30)), center_title, T.fs(12), T.TEXT_DIM())
 
 	func _center_string(f: Font, pos: Vector2, text: String, fs: int, color: Color) -> void:
 		var wt := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -94,7 +97,9 @@ class VBars:
 	var font: Font
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(0, 128)
+		# The bars are drawn inside a fixed pad on top (the value above each bar) and one below
+		# (the label), so both the pads and the floor height follow the type they frame.
+		custom_minimum_size = Vector2(0, T.px(128))
 
 	func _draw() -> void:
 		var f: Font = font if font != null else get_theme_default_font()
@@ -103,8 +108,8 @@ class VBars:
 		var maxv := 1
 		for b in bars:
 			maxv = maxi(maxv, int(b.value))
-		var pad_top := 20.0
-		var pad_bottom := 22.0
+		var pad_top := T.px(20)
+		var pad_bottom := T.px(22)
 		var area_h := size.y - pad_top - pad_bottom
 		var n := bars.size()
 		var sep := 8.0
@@ -117,10 +122,12 @@ class VBars:
 				h = 2.0
 			var by := pad_top + (area_h - h)
 			draw_rect(Rect2(x + (slot - bar_w) * 0.5, by, bar_w, h), b.color, true)
+			var vs := T.fs(12)
+			var ls := T.fs(11)
 			var cs := str(b.value)
-			draw_string(f, Vector2(x + slot * 0.5 - f.get_string_size(cs, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x * 0.5, by - 4),
-					cs, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, T.TEXT())
+			draw_string(f, Vector2(x + slot * 0.5 - f.get_string_size(cs, HORIZONTAL_ALIGNMENT_LEFT, -1, vs).x * 0.5, by - T.px(4)),
+					cs, HORIZONTAL_ALIGNMENT_LEFT, -1, vs, T.TEXT())
 			var lbl := str(b.label)
-			draw_string(f, Vector2(x + slot * 0.5 - f.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x * 0.5, size.y - 6),
-					lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, T.TEXT_DIM())
+			draw_string(f, Vector2(x + slot * 0.5 - f.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, ls).x * 0.5, size.y - T.px(6)),
+					lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, ls, T.TEXT_DIM())
 			x += slot + sep
